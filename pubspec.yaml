@@ -11,7 +11,9 @@ dependencies:
     sdk: flutter
   sqflite: ^2.3.0
   path: ^1.8.3
-  image_picker: ^1.0.7 
+  image_picker: ^1.0.7
+  # این خط حیاتی است: نسخه‌ای را قفل می‌کند که با SDK 34 سازگار است و باگ گیت‌هاب را دور می‌زند
+  flutter_plugin_android_lifecycle: 2.0.19
 
 flutter:
   uses-material-design: true
