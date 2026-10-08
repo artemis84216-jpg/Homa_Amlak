@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 7, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 8, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -42,6 +42,20 @@ class DatabaseHelper {
         commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT "active", join_date TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+    // جدول جدید درخواست‌های بازدید
+    await db.execute('''
+      CREATE TABLE viewings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        property_id INTEGER,
+        customer_name TEXT NOT NULL,
+        customer_phone TEXT NOT NULL,
+        viewing_date TEXT NOT NULL,
+        viewing_time TEXT NOT NULL,
+        notes TEXT,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -62,8 +76,24 @@ class DatabaseHelper {
     if (oldVersion < 7) {
       await db.execute('ALTER TABLE properties ADD COLUMN monthly_rent REAL DEFAULT 0');
     }
+    if (oldVersion < 8) {
+      await db.execute('''
+        CREATE TABLE viewings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          property_id INTEGER,
+          customer_name TEXT NOT NULL,
+          customer_phone TEXT NOT NULL,
+          viewing_date TEXT NOT NULL,
+          viewing_time TEXT NOT NULL,
+          notes TEXT,
+          status TEXT DEFAULT 'pending',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
   }
 
+  // --- توابع املاک ---
   Future<int> insertProperty(Map<String, dynamic> property) async {
     final db = await instance.database;
     return await db.insert('properties', property);
@@ -90,6 +120,7 @@ class DatabaseHelper {
     return await db.delete('properties', where: 'id = ?', whereArgs: [id]);
   }
 
+  // --- توابع مشاوران ---
   Future<int> insertAgent(Map<String, dynamic> agent) async {
     final db = await instance.database;
     return await db.insert('agents', agent);
@@ -114,5 +145,38 @@ class DatabaseHelper {
   Future<int> deleteAgent(int id) async {
     final db = await instance.database;
     return await db.delete('agents', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- توابع بازدیدها (جدید) ---
+  Future<int> insertViewing(Map<String, dynamic> viewing) async {
+    final db = await instance.database;
+    return await db.insert('viewings', viewing);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllViewings() async {
+    final db = await instance.database;
+    return await db.query('viewings', orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getViewingsByAgent(String agentName) async {
+    final db = await instance.database;
+    // فقط بازدیدهای مربوط به املاک این مشاور را برگردان
+    return await db.rawQuery('''
+      SELECT v.*, p.title as property_title, p.agent_name 
+      FROM viewings v 
+      JOIN properties p ON v.property_id = p.id 
+      WHERE p.agent_name = ? 
+      ORDER BY v.id DESC
+    ''', [agentName]);
+  }
+
+  Future<int> updateViewingStatus(int id, String status) async {
+    final db = await instance.database;
+    return await db.update('viewings', {'status': status}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteViewing(int id) async {
+    final db = await instance.database;
+    return await db.delete('viewings', where: 'id = ?', whereArgs: [id]);
   }
 }
