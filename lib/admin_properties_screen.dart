@@ -32,16 +32,20 @@ class _AdminPropertiesScreenState extends State<AdminPropertiesScreen> {
     _loadProperties();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(newStatus == 'sold' ? '✓ ملک فروخته شد' : '✓ ملک موجود شد'),
+        content: Text(newStatus == 'sold' ? '✓ وضعیت به فروخته شده تغییر کرد' : '✓ وضعیت به موجود تغییر کرد'),
         backgroundColor: Colors.green,
       ),
     );
   }
 
   String _formatPrice(dynamic price) {
-    if (price == null) return '0';
+    if (price == null) return '۰';
     final num priceNum = price is int ? price : (price is double ? price.toInt() : 0);
-    return priceNum.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+    String formatted = priceNum.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+    return formatted.replaceAll('0', '۰').replaceAll('1', '۱').replaceAll('2', '۲')
+        .replaceAll('3', '۳').replaceAll('4', '۴').replaceAll('5', '۵')
+        .replaceAll('6', '۶').replaceAll('7', '۷').replaceAll('8', '۸')
+        .replaceAll('9', '۹');
   }
 
   @override
@@ -50,6 +54,8 @@ class _AdminPropertiesScreenState extends State<AdminPropertiesScreen> {
       appBar: AppBar(
         title: const Text('مدیریت املاک'),
         backgroundColor: Colors.indigo[700],
+        centerTitle: true,       // وسط‌چین
+        foregroundColor: Colors.white, // سفید
         actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _loadProperties)],
       ),
       body: _isLoading
@@ -103,22 +109,6 @@ class _AdminPropertiesScreenState extends State<AdminPropertiesScreen> {
                                   const Icon(Icons.attach_money, size: 16, color: Colors.grey),
                                   const SizedBox(width: 4),
                                   Expanded(child: Text('${_formatPrice(p['price'])} تومان', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green))),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: p['status'] == 'available' ? Colors.green[100] : Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      p['status'] == 'available' ? 'موجود' : 'فروخته شده',
-                                      style: TextStyle(color: p['status'] == 'available' ? Colors.green[800] : Colors.grey[700], fontSize: 12),
-                                    ),
-                                  ),
                                 ],
                               ),
                               const SizedBox(height: 12),
