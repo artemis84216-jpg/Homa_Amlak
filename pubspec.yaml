@@ -14,7 +14,7 @@ dependencies:
   image_picker: ^1.0.7
   path_provider: ^2.1.1
   flutter_plugin_android_lifecycle: 2.0.19
-  persian_datetime_picker: 2.5.2  # <-- تغییر نسخه به 2.5.2
+  persian_datetime_picker: ^2.6.0  # <-- نسخه صحیح و موجود
   pdf: ^3.10.8
   printing: ^5.12.0
 
