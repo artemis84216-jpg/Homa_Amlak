@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'agents_management_screen.dart';
+import 'admin_properties_screen.dart';
+import 'reports_screen.dart';
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -16,31 +19,50 @@ class AdminDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: GridView.count(
-        crossAxisCount: 2,
-        padding: const EdgeInsets.all(16),
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        children: [
-          _buildCard(Icons.people, 'مشاوران', Colors.blue),
-          _buildCard(Icons.home, 'املاک', Colors.green),
-          _buildCard(Icons.description, 'قراردادها', Colors.orange),
-          _buildCard(Icons.payment, 'پرداخت‌ها', Colors.purple),
-          _buildCard(Icons.receipt_long, 'هزینه‌ها', Colors.red),
-          _buildCard(Icons.bar_chart, 'گزارشات', Colors.teal),
-          _buildCard(Icons.settings, 'تنظیمات', Colors.grey),
-          _buildCard(Icons.backup, 'پشتیبان', Colors.indigo),
-        ],
+      body: Directionality(
+        textDirection: TextDirection.rtl,
+        child: GridView.count(
+          crossAxisCount: 2,
+          padding: const EdgeInsets.all(16),
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          children: [
+            _buildCard(context, Icons.people, 'مشاوران', Colors.purple, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AgentsManagementScreen()));
+            }),
+            _buildCard(context, Icons.home, 'املاک', Colors.blue, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPropertiesScreen()));
+            }),
+            _buildCard(context, Icons.description, 'قراردادها', Colors.orange, () {
+              _showComingSoon(context, 'قراردادها');
+            }),
+            _buildCard(context, Icons.payment, 'پرداخت‌ها', Colors.purple, () {
+              _showComingSoon(context, 'پرداخت‌ها');
+            }),
+            _buildCard(context, Icons.receipt_long, 'هزینه‌ها', Colors.red, () {
+              _showComingSoon(context, 'هزینه‌ها');
+            }),
+            _buildCard(context, Icons.bar_chart, 'گزارشات', Colors.teal, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
+            }),
+            _buildCard(context, Icons.settings, 'تنظیمات', Colors.grey, () {
+              _showComingSoon(context, 'تنظیمات');
+            }),
+            _buildCard(context, Icons.backup, 'پشتیبان', Colors.indigo, () {
+              _showComingSoon(context, 'پشتیبان‌گیری');
+            }),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildCard(IconData icon, String title, Color color) {
+  Widget _buildCard(BuildContext context, IconData icon, String title, Color color, VoidCallback onTap) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -51,6 +73,12 @@ class AdminDashboard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('بخش $feature به زودی اضافه می‌شود')),
     );
   }
 }
