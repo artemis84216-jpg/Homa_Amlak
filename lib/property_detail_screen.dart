@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_utils.dart';
-import 'property_image_gallery.dart'; // <-- این خط اضافه شد
+import 'property_image_gallery.dart';
+import 'request_viewing_screen.dart';
 
 class PropertyDetailScreen extends StatelessWidget {
   final Map<String, dynamic> property;
@@ -20,17 +21,13 @@ class PropertyDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // استفاده از گالری جدید
               PropertyImageGallery(imagesJson: property['images']),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      property['title'] ?? '',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.gold),
-                    ),
+                    Text(property['title'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.gold)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -59,6 +56,18 @@ class PropertyDetailScreen extends StatelessWidget {
                     _buildInfoRow(Icons.square_foot, 'متراژ', '${formatNumber((property['area'] ?? 0).toInt())} متر مربع'),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.attach_money, 'قیمت', '${formatPrice(property['price'])} تومان', isPrice: true),
+                    if (property['listing_type'] == 'rent' && property['monthly_rent'] != null && (property['monthly_rent'] as num) > 0) ...[
+                      const SizedBox(height: 12),
+                      _buildInfoRow(Icons.money, 'اجاره ماهیانه', '${formatPrice(property['monthly_rent'])} تومان', isPrice: true),
+                    ],
+                    if ((property['bedrooms'] ?? 0) > 0) ...[
+                      const SizedBox(height: 12),
+                      _buildInfoRow(Icons.bed, 'تعداد خواب', formatNumber(property['bedrooms'].toInt())),
+                    ],
+                    if ((property['floor'] ?? 0) > 0) ...[
+                      const SizedBox(height: 12),
+                      _buildInfoRow(Icons.layers, 'طبقه', '${formatNumber(property['floor'].toInt())} از ${formatNumber((property['total_floors'] ?? 0).toInt())}'),
+                    ],
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.location_on, 'آدرس', property['address'] ?? 'بدون آدرس'),
                     const Divider(height: 32, color: AppTheme.gold),
@@ -91,21 +100,43 @@ class PropertyDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 32),
+                    // دکمه تماس با مشاور
                     SizedBox(
                       height: 55,
                       child: ElevatedButton.icon(
                         onPressed: property['status'] == 'available' && property['agent_phone'] != null
                             ? () {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('شماره تماس مشاور: ${property['agent_phone']}'),
-                                    backgroundColor: AppTheme.gold,
-                                  ),
+                                  SnackBar(content: Text('شماره تماس مشاور: ${property['agent_phone']}'), backgroundColor: AppTheme.gold),
                                 );
                               }
                             : null,
                         icon: const Icon(Icons.phone, size: 24),
                         label: const Text('تماس با مشاور املاک', style: TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // دکمه جدید: درخواست بازدید
+                    SizedBox(
+                      height: 55,
+                      child: OutlinedButton.icon(
+                        onPressed: property['status'] == 'available'
+                            ? () async {
+                                final result = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => RequestViewingScreen(property: property)),
+                                );
+                                if (result == true && mounted) {
+                                  Navigator.pop(context);
+                                }
+                              }
+                            : null,
+                        icon: const Icon(Icons.event, size: 24, color: AppTheme.gold),
+                        label: const Text('درخواست بازدید', style: TextStyle(fontSize: 18, color: AppTheme.gold)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppTheme.gold, width: 2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
                       ),
                     ),
                   ],
