@@ -34,10 +34,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _availableProperties = properties.where((p) => p['status'] == 'available').length;
 
     final contracts = await db.query('contracts');
-    _totalIncome = contracts.fold(0.0, (sum, c) => sum + (c['amount']?.toDouble() ?? 0));
+    // اصلاح خطای نوع داده در اینجا:
+    _totalIncome = contracts.fold(0.0, (sum, c) => sum + ((c['amount'] as num?)?.toDouble() ?? 0.0));
 
     final expenses = await db.query('expenses');
-    _totalExpenses = expenses.fold(0.0, (sum, e) => sum + (e['amount']?.toDouble() ?? 0));
+    // اصلاح خطای نوع داده در اینجا:
+    _totalExpenses = expenses.fold(0.0, (sum, e) => sum + ((e['amount'] as num?)?.toDouble() ?? 0.0));
 
     final agents = await db.query('agents');
     _totalAgents = agents.length;
@@ -70,7 +72,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // کارت آمار املاک
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -95,8 +96,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // کارت آمار مالی
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -127,8 +126,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-
-                    // کارت آمار مشاوران
                     Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
