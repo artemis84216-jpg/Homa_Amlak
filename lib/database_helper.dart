@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 4, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -24,8 +24,9 @@ class DatabaseHelper {
       CREATE TABLE properties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL, type TEXT, area REAL, price REAL, address TEXT,
-        owner_name TEXT, owner_phone TEXT, images TEXT,
-        status TEXT DEFAULT 'available', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        owner_name TEXT, owner_phone TEXT,
+        agent_name TEXT, agent_phone TEXT,
+        images TEXT, status TEXT DEFAULT 'available', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
     await db.execute('CREATE TABLE customers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, national_id TEXT, phone TEXT, role TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
@@ -43,9 +44,12 @@ class DatabaseHelper {
     if (oldVersion < 3) {
       await db.execute('ALTER TABLE properties ADD COLUMN images TEXT');
     }
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE properties ADD COLUMN agent_name TEXT');
+      await db.execute('ALTER TABLE properties ADD COLUMN agent_phone TEXT');
+    }
   }
 
-  // --- توابع املاک ---
   Future<int> insertProperty(Map<String, dynamic> property) async {
     final db = await instance.database;
     return await db.insert('properties', property);
@@ -82,7 +86,6 @@ class DatabaseHelper {
     );
   }
 
-  // --- توابع مشتریان ---
   Future<int> insertCustomer(Map<String, dynamic> customer) async {
     final db = await instance.database;
     return await db.insert('customers', customer);
@@ -103,7 +106,6 @@ class DatabaseHelper {
     );
   }
 
-  // --- توابع قراردادها ---
   Future<int> insertContract(Map<String, dynamic> contract) async {
     final db = await instance.database;
     return await db.insert('contracts', contract);
@@ -114,7 +116,6 @@ class DatabaseHelper {
     return await db.query('contracts', orderBy: 'id DESC');
   }
 
-  // --- توابع پرداخت‌ها ---
   Future<int> insertPayment(Map<String, dynamic> payment) async {
     final db = await instance.database;
     return await db.insert('payments', payment);
@@ -125,7 +126,6 @@ class DatabaseHelper {
     return await db.query('payments', orderBy: 'id DESC');
   }
 
-  // --- توابع هزینه‌ها ---
   Future<int> insertExpense(Map<String, dynamic> expense) async {
     final db = await instance.database;
     return await db.insert('expenses', expense);
@@ -136,7 +136,6 @@ class DatabaseHelper {
     return await db.query('expenses', orderBy: 'id DESC');
   }
 
-  // --- توابع مشاوران ---
   Future<int> insertAgent(Map<String, dynamic> agent) async {
     final db = await instance.database;
     return await db.insert('agents', agent);
