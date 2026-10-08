@@ -26,8 +26,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   final _ownerPhoneController = TextEditingController();
   final _agentNameController = TextEditingController();
   final _agentPhoneController = TextEditingController();
+  final _bedroomsController = TextEditingController();
+  final _floorController = TextEditingController();
+  final _totalFloorsController = TextEditingController();
   
   String _selectedType = 'آپارتمان';
+  String _listingType = 'sale'; // sale (فروش) یا rent (اجاره)
   bool _isPublic = true;
   bool _isLoading = false;
   bool _isEditMode = false;
@@ -39,13 +43,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   void initState() {
     super.initState();
     _isEditMode = widget.propertyId != null;
-    
-    // پر کردن خودکار اطلاعات مشاور
     if (widget.currentAgent != null) {
       _agentNameController.text = widget.currentAgent!['name'] ?? '';
       _agentPhoneController.text = widget.currentAgent!['phone'] ?? '';
     }
-    
     if (_isEditMode) _loadPropertyData();
   }
 
@@ -55,6 +56,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     if (data != null) {
       _titleController.text = data['title'] ?? '';
       _selectedType = data['type'] ?? 'آپارتمان';
+      _listingType = data['listing_type'] ?? 'sale';
       _areaController.text = data['area']?.toString() ?? '';
       final price = data['price']?.toInt() ?? 0;
       _priceController.text = price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
@@ -63,6 +65,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       _ownerPhoneController.text = data['owner_phone'] ?? '';
       _agentNameController.text = data['agent_name'] ?? _agentNameController.text;
       _agentPhoneController.text = data['agent_phone'] ?? _agentPhoneController.text;
+      _bedroomsController.text = data['bedrooms']?.toString() ?? '';
+      _floorController.text = data['floor']?.toString() ?? '';
+      _totalFloorsController.text = data['total_floors']?.toString() ?? '';
       _isPublic = data['is_public'] == 1;
       
       if (data['images'] != null && data['images'] != '') {
@@ -109,6 +114,10 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
         'owner_phone': _ownerPhoneController.text.trim(),
         'agent_name': _agentNameController.text.trim(),
         'agent_phone': _agentPhoneController.text.trim(),
+        'bedrooms': int.tryParse(toEnglishDigits(_bedroomsController.text)) ?? 0,
+        'floor': int.tryParse(toEnglishDigits(_floorController.text)) ?? 0,
+        'total_floors': int.tryParse(toEnglishDigits(_totalFloorsController.text)) ?? 0,
+        'listing_type': _listingType,
         'images': jsonEncode(_imagePaths),
         'is_public': _isPublic ? 1 : 0,
         'status': 'available',
@@ -137,10 +146,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      appBar: AppBar(
-        title: Text(_isEditMode ? 'ویرایش ملک' : 'ثبت ملک جدید'), 
-        centerTitle: true
-      ),
+      appBar: AppBar(title: Text(_isEditMode ? 'ویرایش ملک' : 'ثبت ملک جدید'), centerTitle: true),
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: _isLoading && _isEditMode 
@@ -190,6 +196,43 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                         )
                       ),
                       const Divider(height: 32, color: AppTheme.gold),
+                      
+                      // دکمه‌های انتخاب نوع معامله
+                      const Text('نوع معامله', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => setState(() => _listingType = 'sale'),
+                              icon: const Icon(Icons.sell),
+                              label: const Text('فروش'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _listingType == 'sale' ? AppTheme.gold : AppTheme.cardBlack,
+                                foregroundColor: _listingType == 'sale' ? Colors.black : AppTheme.textWhite,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: const BorderSide(color: AppTheme.gold),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => setState(() => _listingType = 'rent'),
+                              icon: const Icon(Icons.key),
+                              label: const Text('اجاره'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _listingType == 'rent' ? AppTheme.gold : AppTheme.cardBlack,
+                                foregroundColor: _listingType == 'rent' ? Colors.black : AppTheme.textWhite,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: const BorderSide(color: AppTheme.gold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      
+                      const Divider(height: 32, color: AppTheme.gold),
                       const Text('مشخصات ملک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -219,8 +262,34 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                             child: TextFormField(
                               controller: _priceController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite),
                               inputFormatters: [CommaSeparatorFormatter()], 
-                              decoration: const InputDecoration(labelText: 'قیمت (تومان)', prefixIcon: Icon(Icons.attach_money, color: AppTheme.gold)), 
+                              decoration: InputDecoration(labelText: _listingType == 'sale' ? 'قیمت (تومان)' : 'رهن (تومان)', prefixIcon: Icon(Icons.attach_money, color: AppTheme.gold)), 
                               validator: (v) => v == null || v.isEmpty ? 'الزامی' : (double.tryParse(toEnglishDigits(v.replaceAll(',', ''))) == null ? 'عدد نامعتبر' : null)
+                            )
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // فیلدهای خواب، طبقه، کل طبقات
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _bedroomsController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite),
+                              decoration: const InputDecoration(labelText: 'تعداد خواب', prefixIcon: Icon(Icons.bed, color: AppTheme.gold)), 
+                            )
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _floorController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite),
+                              decoration: const InputDecoration(labelText: 'طبقه', prefixIcon: Icon(Icons.layers, color: AppTheme.gold)), 
+                            )
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _totalFloorsController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite),
+                              decoration: const InputDecoration(labelText: 'کل طبقات', prefixIcon: Icon(Icons.apartment, color: AppTheme.gold)), 
                             )
                           ),
                         ],
@@ -275,7 +344,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   }
 }
 
-// فرمت‌کننده کاما برای قیمت
 class CommaSeparatorFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
