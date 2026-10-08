@@ -88,27 +88,55 @@ class PropertyDetailScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.location_on, 'آدرس', property['address'] ?? 'بدون آدرس'),
                     const Divider(height: 32),
+                    
+                    // بخش مشخصات مالک (فقط نام، بدون شماره)
                     const Text('مشخصات مالک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.person, 'نام مالک', property['owner_name'] ?? 'ثبت نشده'),
-                    const SizedBox(height: 12),
-                    _buildInfoRow(Icons.phone, 'شماره تماس', property['owner_phone'] ?? 'ثبت نشده'),
+                    
+                    const Divider(height: 32),
+                    
+                    // بخش مشخصات مشاور (نام و شماره تماس)
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.badge, color: Colors.blue[700], size: 24),
+                              const SizedBox(width: 8),
+                              Text('مشاور ثبت‌کننده این فایل', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[800])),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow(Icons.person_outline, 'نام مشاور', property['agent_name'] ?? 'ثبت نشده'),
+                          const SizedBox(height: 12),
+                          _buildInfoRow(Icons.phone_android, 'شماره تماس مشاور', property['agent_phone'] ?? 'ثبت نشده'),
+                        ],
+                      ),
+                    ),
+
                     const SizedBox(height: 32),
                     SizedBox(
                       height: 55,
                       child: ElevatedButton.icon(
-                        onPressed: property['status'] == 'available' && property['owner_phone'] != null
+                        onPressed: property['status'] == 'available' && property['agent_phone'] != null
                             ? () {
-                                // اینجا می‌توان بعداً قابلیت تماس یا ارسال پیامک را اضافه کرد
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('شماره تماس: ${property['owner_phone']}')),
+                                  SnackBar(content: Text('شماره تماس مشاور: ${property['agent_phone']}')),
                                 );
                               }
                             : null,
                         icon: const Icon(Icons.phone, size: 24),
-                        label: const Text('تماس با مالک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        label: const Text('تماس با مشاور املاک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
+                          backgroundColor: Colors.blue[700],
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -143,4 +171,4 @@ class PropertyDetailScreen extends StatelessWidget {
       ],
     );
   }
-}
+}/
