@@ -19,7 +19,8 @@ jobs:
           cache: true
       
       - name: Create android folder
-        run: flutter create . --platforms android
+        # تغییر مهم اینجاست: اضافه کردن --project-name homa_amlak
+        run: flutter create . --platforms android --project-name homa_amlak
       
       - name: Install dependencies
         run: flutter pub get
