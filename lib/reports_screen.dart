@@ -33,7 +33,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() => _isLoading = true);
     final db = await DatabaseHelper.instance.database;
 
-    // در نسخه واقعی، اینجا کوئری بر اساس تاریخ فیلتر می‌شود
     final properties = await db.query('properties');
     _totalProperties = properties.length;
     _soldProperties = properties.where((p) => p['status'] == 'sold').length;
@@ -59,8 +58,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
               .replaceAll('9', '۹');
   }
 
+  // تابع کمکی برای فرمت تاریخ
+  String _formatJalali(Jalali? date) {
+    if (date == null) return 'انتخاب تاریخ';
+    return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+  }
+
   Future<void> _generatePDF() async {
     final pdf = pw.Document();
+    final now = Jalali.now();
+    final todayStr = '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}';
 
     pdf.addPage(
       pw.Page(
@@ -72,7 +79,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               children: [
                 pw.Text('گزارش مالی املاک هما', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
                 pw.SizedBox(height: 20),
-                pw.Text('تاریخ گزارش: ${Jalali.now().formatFullDate()}', style: const pw.TextStyle(fontSize: 14)),
+                pw.Text('تاریخ گزارش: $todayStr', style: const pw.TextStyle(fontSize: 14)),
+                if (_startDate != null && _endDate != null)
+                  pw.Text('بازه زمانی: ${_formatJalali(_startDate)} تا ${_formatJalali(_endDate)}', style: const pw.TextStyle(fontSize: 14)),
                 pw.Divider(),
                 pw.SizedBox(height: 10),
                 pw.Row(
@@ -140,7 +149,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.calendar_today),
-                                    label: Text(_startDate != null ? _startDate!.formatFullDate() : 'تاریخ شروع'),
+                                    label: Text(_formatJalali(_startDate)),
                                     onPressed: () async {
                                       final picked = await showPersianDatePicker(
                                         context: context,
@@ -156,7 +165,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.calendar_today),
-                                    label: Text(_endDate != null ? _endDate!.formatFullDate() : 'تاریخ پایان'),
+                                    label: Text(_formatJalali(_endDate)),
                                     onPressed: () async {
                                       final picked = await showPersianDatePicker(
                                         context: context,
@@ -172,7 +181,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ),
                             const SizedBox(height: 12),
                             ElevatedButton.icon(
-                              onPressed: _loadReports, // در نسخه نهایی اینجا فیلتر دیتابیس اعمال می‌شود
+                              onPressed: _loadReports, 
                               icon: const Icon(Icons.filter_alt),
                               label: const Text('اعمال فیلتر و بروزرسانی'),
                               style: ElevatedButton.styleFrom(backgroundColor: Colors.teal[700], foregroundColor: Colors.white),
