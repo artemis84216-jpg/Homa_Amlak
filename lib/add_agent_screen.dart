@@ -41,7 +41,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
   final _phoneController = TextEditingController();
   final _nationalIdController = TextEditingController();
   final _commissionController = TextEditingController();
-  final _salaryController = TextEditingController(); // حالا فرمت‌دهی می‌شود
+  final _salaryController = TextEditingController();
   final _notesController = TextEditingController();
   
   String _status = 'active';
@@ -65,11 +65,14 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
       _phoneController.text = data['phone']?.toString() ?? '';
       _nationalIdController.text = data['national_id']?.toString() ?? '';
       
-      // فرمت‌دهی حقوق و کمیسیون هنگام بارگذاری
-      final salary = data['base_salary']?.toInt() ?? 0;
-      _salaryController.text = salary.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+      // اصلاح خطای نوع داده با اضافه کردن (as num?)
+      final salary = (data['base_salary'] as num?)?.toInt() ?? 0;
+      _salaryController.text = salary.toString().replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), 
+        (Match m) => '${m[1]},'
+      );
       
-      final commission = data['commission_rate']?.toInt() ?? 0;
+      final commission = (data['commission_rate'] as num?)?.toInt() ?? 0;
       _commissionController.text = commission.toString();
       
       _notesController.text = data['notes']?.toString() ?? '';
@@ -88,7 +91,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
         'phone': _phoneController.text.trim(),
         'national_id': _nationalIdController.text.trim(),
         'commission_rate': double.parse(toEnglishDigits(_commissionController.text)),
-        'base_salary': double.parse(toEnglishDigits(_salaryController.text.replaceAll(',', ''))), // حذف کاما قبل از ذخیره
+        'base_salary': double.parse(toEnglishDigits(_salaryController.text.replaceAll(',', ''))),
         'status': _status,
         'notes': _notesController.text.trim(),
       };
@@ -124,8 +127,8 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
       appBar: AppBar(
         title: Text(_isEditMode ? 'ویرایش مشاور' : 'افزودن مشاور'),
         backgroundColor: Colors.purple[700],
-        centerTitle: true, // وسط‌چین کردن تیتر
-        foregroundColor: Colors.white, // سفید کردن آیکون‌ها و متن
+        centerTitle: true,
+        foregroundColor: Colors.white,
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
@@ -170,7 +173,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                               controller: _salaryController, 
                               textDirection: TextDirection.rtl, 
                               keyboardType: TextInputType.number,
-                              inputFormatters: [CommaSeparatorFormatter()], // <-- اصلاح ۱: اضافه شدن فرمت ۳ رقمی
+                              inputFormatters: [CommaSeparatorFormatter()],
                               decoration: const InputDecoration(labelText: 'حقوق پایه (تومان)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()),
                             ),
                           ),
@@ -197,7 +200,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _isLoading ? null : _saveAgent,
                           icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.save, size: 24),
-                          label: Text(_isLoading ? 'در حال ذخیره...' : (_isEditMode ? 'ذخیره تغییرات' : 'افزودن مشاور'), style: const TextStyle(fontSize: 18, color: Colors.white)), // <-- اصلاح ۲: رنگ متن سفید
+                          label: Text(_isLoading ? 'در حال ذخیره...' : (_isEditMode ? 'ذخیره تغییرات' : 'افزودن مشاور'), style: const TextStyle(fontSize: 18, color: Colors.white)),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.purple[700], 
                             foregroundColor: Colors.white, 
