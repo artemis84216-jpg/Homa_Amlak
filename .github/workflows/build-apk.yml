@@ -29,29 +29,16 @@ jobs:
       
       - name: Patch Android Configurations
         run: |
-          # ۱. جایگزینی دقیق compileSdk به ۳۵
-          sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 35/' android/app/build.gradle
-          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/' android/app/build.gradle
+          # ۱. اطمینان از استفاده از SDK 34 (جلوگیری از باگ خرابی SDK 35 در گیت‌هاب)
+          sed -i 's/compileSdk.*/compileSdk 34/' android/app/build.gradle
+          sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle
           
-          # ۲. اجبار استفاده از Build Tools نسخه ۳۴.۰.۰ (برای رفع خطای aapt2)
-          sed -i '/compileSdk 35/a \    buildToolsVersion "34.0.0"' android/app/build.gradle
-          sed -i '/compileSdkVersion 35/a \    buildToolsVersion "34.0.0"' android/app/build.gradle
-          
-          # ۳. تغییر نسخه Kotlin به 1.9.24
+          # ۲. تغییر نسخه Kotlin به 1.9.24
           sed -i 's/org\.jetbrains\.kotlin\.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
           sed -i "s/ext\.kotlin_version.*/ext.kotlin_version = '1.9.24'/" android/build.gradle
           
-          # ۴. افزودن مجوزهای دوربین و گالری
+          # ۳. افزودن مجوزهای دوربین و گالری
           sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>' android/app/src/main/AndroidManifest.xml
-
-      - name: Fix Corrupted Android SDK Platform
-        run: |
-          export ANDROID_HOME=/usr/local/lib/android/sdk
-          # حذف پوشه خراب اندروید ۳۵ (اگر وجود داشته باشد)
-          rm -rf $ANDROID_HOME/platforms/android-35
-          # قبول قوانین و دانلود مجدد و سالم پلتفرم ۳۵ و بیلد تولز ۳۴
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;34.0.0"
 
       - name: Install dependencies
         run: flutter pub get
