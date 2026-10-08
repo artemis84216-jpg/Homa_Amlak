@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_utils.dart';
+import 'property_image_gallery.dart'; // <-- این خط اضافه شد
 
 class PropertyDetailScreen extends StatelessWidget {
   final Map<String, dynamic> property;
