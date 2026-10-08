@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 5, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 6, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -26,6 +26,8 @@ class DatabaseHelper {
         title TEXT NOT NULL, type TEXT, area REAL, price REAL, address TEXT,
         owner_name TEXT, owner_phone TEXT,
         agent_name TEXT, agent_phone TEXT,
+        bedrooms INTEGER DEFAULT 0, floor INTEGER DEFAULT 0, total_floors INTEGER DEFAULT 0,
+        listing_type TEXT DEFAULT 'sale',
         images TEXT, is_public INTEGER DEFAULT 1, status TEXT DEFAULT 'available', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -50,6 +52,12 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE agents ADD COLUMN password TEXT');
       await db.execute('ALTER TABLE agents ADD COLUMN profile_image TEXT');
       await db.execute('ALTER TABLE properties ADD COLUMN is_public INTEGER DEFAULT 1');
+    }
+    if (oldVersion < 6) {
+      await db.execute('ALTER TABLE properties ADD COLUMN bedrooms INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE properties ADD COLUMN floor INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE properties ADD COLUMN total_floors INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE properties ADD COLUMN listing_type TEXT DEFAULT "sale"');
     }
   }
 
@@ -89,14 +97,9 @@ class DatabaseHelper {
     return await db.query('agents', orderBy: 'id DESC');
   }
 
-  // متد جدید برای احراز هویت مشاور
   Future<Map<String, dynamic>?> getAgentByCredentials(String name, String password) async {
     final db = await instance.database;
-    final result = await db.query(
-      'agents', 
-      where: 'name = ? AND password = ? AND status = "active"', 
-      whereArgs: [name, password]
-    );
+    final result = await db.query('agents', where: 'name = ? AND password = ? AND status = "active"', whereArgs: [name, password]);
     return result.isNotEmpty ? result.first : null;
   }
 
