@@ -1,56 +1,63 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'properties_list_screen.dart';
 import 'add_property_screen.dart';
+import 'app_utils.dart';
 
 class AgentDashboard extends StatelessWidget {
-  const AgentDashboard({super.key});
+  final Map<String, dynamic> agentData;
+  const AgentDashboard({super.key, required this.agentData});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.backgroundBlack,
       appBar: AppBar(
-        title: const Text('پنل مشاور'),
-        backgroundColor: Colors.green[700],
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ],
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (agentData['profile_image'] != null)
+              CircleAvatar(
+                radius: 16, 
+                backgroundImage: FileImage(File(agentData['profile_image'])),
+              ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                agentData['name'] ?? 'پنل مشاور', 
+                style: const TextStyle(fontSize: 16, color: AppTheme.gold), 
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
       ),
-      body: GridView.count(
-        crossAxisCount: 2,
-        padding: const EdgeInsets.all(16),
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        children: [
-          _buildCard(context, Icons.add_home, 'ثبت ملک', Colors.green, () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPropertyScreen()));
-          }),
-          _buildCard(context, Icons.home, 'املاک من', Colors.blue, () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const PropertiesListScreen()));
-          }),
-          _buildCard(context, Icons.people, 'مشتریان', Colors.orange, () {
-            _showComingSoon(context, 'مشتریان');
-          }),
-          _buildCard(context, Icons.calendar_today, 'بازدیدها', Colors.purple, () {
-            _showComingSoon(context, 'بازدیدها');
-          }),
-          _buildCard(context, Icons.description, 'قراردادها', Colors.teal, () {
-            _showComingSoon(context, 'قراردادها');
-          }),
-          _buildCard(context, Icons.attach_money, 'کمیسیون', Colors.amber, () {
-            _showComingSoon(context, 'کمیسیون');
-          }),
-        ],
+      body: Directionality(
+        textDirection: TextDirection.rtl,
+        child: GridView.count(
+          crossAxisCount: 2,
+          padding: const EdgeInsets.all(16),
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          children: [
+            _buildCard(context, Icons.add_home, 'ثبت ملک', AppTheme.gold, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => AddPropertyScreen(currentAgent: agentData)));
+            }),
+            _buildCard(context, Icons.home, 'املاک من', AppTheme.gold, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => PropertiesListScreen(agentId: agentData['id'])));
+            }),
+            _buildCard(context, Icons.people, 'مشتریان', AppTheme.gold, () { _showComingSoon(context, 'مشتریان'); }),
+            _buildCard(context, Icons.calendar_today, 'بازدیدها', AppTheme.gold, () { _showComingSoon(context, 'بازدیدها'); }),
+            _buildCard(context, Icons.attach_money, 'کمیسیون من', AppTheme.gold, () { _showComingSoon(context, 'کمیسیون'); }),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildCard(BuildContext context, IconData icon, String title, Color color, VoidCallback onTap) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
@@ -59,7 +66,7 @@ class AgentDashboard extends StatelessWidget {
           children: [
             Icon(icon, size: 40, color: color),
             const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textWhite)),
           ],
         ),
       ),
@@ -68,7 +75,7 @@ class AgentDashboard extends StatelessWidget {
 
   void _showComingSoon(BuildContext context, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('بخش $feature به زودی اضافه می‌شود')),
+      SnackBar(content: Text('بخش $feature به زودی اضافه می‌شود'), backgroundColor: AppTheme.gold),
     );
   }
 }
