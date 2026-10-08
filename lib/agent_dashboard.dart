@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'properties_list_screen.dart';
 import 'add_property_screen.dart';
+import 'viewings_list_screen.dart';
 import 'app_utils.dart';
 
 class AgentDashboard extends StatelessWidget {
@@ -18,14 +19,14 @@ class AgentDashboard extends StatelessWidget {
           children: [
             if (agentData['profile_image'] != null)
               CircleAvatar(
-                radius: 16, 
+                radius: 16,
                 backgroundImage: FileImage(File(agentData['profile_image'])),
               ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                agentData['name'] ?? 'پنل مشاور', 
-                style: const TextStyle(fontSize: 16, color: AppTheme.gold), 
+                agentData['name'] ?? 'پنل مشاور',
+                style: const TextStyle(fontSize: 16, color: AppTheme.gold),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -47,8 +48,10 @@ class AgentDashboard extends StatelessWidget {
             _buildCard(context, Icons.home, 'املاک من', AppTheme.gold, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => PropertiesListScreen(currentAgent: agentData)));
             }),
+            _buildCard(context, Icons.event, 'بازدیدها', AppTheme.gold, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => ViewingsListScreen(agentData: agentData)));
+            }),
             _buildCard(context, Icons.people, 'مشتریان', AppTheme.gold, () { _showComingSoon(context, 'مشتریان'); }),
-            _buildCard(context, Icons.calendar_today, 'بازدیدها', AppTheme.gold, () { _showComingSoon(context, 'بازدیدها'); }),
             _buildCard(context, Icons.attach_money, 'کمیسیون من', AppTheme.gold, () { _showComingSoon(context, 'کمیسیون'); }),
           ],
         ),
