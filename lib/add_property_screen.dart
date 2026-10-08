@@ -47,11 +47,13 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   final _addressController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
+  final _agentNameController = TextEditingController(); // جدید
+  final _agentPhoneController = TextEditingController(); // جدید
   
   String _selectedType = 'آپارتمان';
   bool _isLoading = false;
   bool _isEditMode = false;
-  final List<String> _imagePaths = []; // مسیرهای دائمی عکس‌ها
+  final List<String> _imagePaths = [];
   final ImagePicker _picker = ImagePicker();
   final List<String> _propertyTypes = ['آپارتمان', 'ویلا', 'زمین', 'تجاری', 'مغازه'];
 
@@ -77,17 +79,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       _addressController.text = data['address'] ?? '';
       _ownerNameController.text = data['owner_name'] ?? '';
       _ownerPhoneController.text = data['owner_phone'] ?? '';
+      _agentNameController.text = data['agent_name'] ?? '';
+      _agentPhoneController.text = data['agent_phone'] ?? '';
       
-      // بارگذاری عکس‌های ذخیره‌شده
       if (data['images'] != null && data['images'] != '') {
         try {
           final List<dynamic> paths = jsonDecode(data['images']);
-          setState(() {
-            _imagePaths.addAll(paths.cast<String>());
-          });
-        } catch (e) {
-          print('Error loading images: $e');
-        }
+          setState(() => _imagePaths.addAll(paths.cast<String>()));
+        } catch (e) {}
       }
     }
     setState(() => _isLoading = false);
@@ -96,16 +95,11 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source);
     if (image != null) {
-      // ذخیره عکس در پوشه دائمی
       final dir = await getApplicationDocumentsDirectory();
       final propertyDir = Directory('${dir.path}/property_images');
-      if (!await propertyDir.exists()) {
-        await propertyDir.create(recursive: true);
-      }
-      
+      if (!await propertyDir.exists()) await propertyDir.create(recursive: true);
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
       final savedImage = await File(image.path).copy('${propertyDir.path}/$fileName');
-      
       setState(() => _imagePaths.add(savedImage.path));
     }
   }
@@ -130,7 +124,9 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
         'address': _addressController.text.trim(),
         'owner_name': _ownerNameController.text.trim(),
         'owner_phone': _ownerPhoneController.text.trim(),
-        'images': jsonEncode(_imagePaths), // ذخیره مسیر عکس‌ها به صورت JSON
+        'agent_name': _agentNameController.text.trim(),
+        'agent_phone': _agentPhoneController.text.trim(),
+        'images': jsonEncode(_imagePaths),
         'status': 'available',
       };
 
@@ -143,18 +139,13 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEditMode ? '✓ ملک با موفقیت ویرایش شد' : '✓ ملک با موفقیت ثبت شد'),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: Text(_isEditMode ? '✓ ملک ویرایش شد' : '✓ ملک ثبت شد'), backgroundColor: Colors.green),
         );
         Navigator.pop(context, true);
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('خطا: $e'), backgroundColor: Colors.red),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('خطا: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -164,6 +155,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       appBar: AppBar(
         title: Text(_isEditMode ? 'ویرایش ملک' : 'ثبت ملک جدید'),
         backgroundColor: _isEditMode ? Colors.orange[700] : Colors.green[700],
+        centerTitle: true,
+        foregroundColor: Colors.white,
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
@@ -176,7 +169,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('تصاویر ملک (اختیاری)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text('تصاویر ملک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 100,
@@ -190,17 +183,8 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                                 padding: const EdgeInsets.only(left: 8),
                                 child: Stack(
                                   children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.file(File(path), width: 100, height: 100, fit: BoxFit.cover),
-                                    ),
-                                    Positioned(
-                                      top: 0, right: 0,
-                                      child: GestureDetector(
-                                        onTap: () => _removeImage(index),
-                                        child: const CircleAvatar(radius: 12, backgroundColor: Colors.red, child: Icon(Icons.close, size: 16, color: Colors.white)),
-                                      ),
-                                    ),
+                                    ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(path), width: 100, height: 100, fit: BoxFit.cover)),
+                                    Positioned(top: 0, right: 0, child: GestureDetector(onTap: () => _removeImage(index), child: const CircleAvatar(radius: 12, backgroundColor: Colors.red, child: Icon(Icons.close, size: 16, color: Colors.white)))),
                                   ],
                                 ),
                               );
@@ -220,58 +204,38 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                       const Divider(height: 32),
                       const Text('مشخصات ملک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _titleController, textDirection: TextDirection.rtl,
-                        decoration: const InputDecoration(labelText: 'عنوان ملک', prefixIcon: Icon(Icons.title), border: OutlineInputBorder()),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'عنوان الزامی است' : null,
-                      ),
+                      TextFormField(controller: _titleController, textDirection: TextDirection.rtl, decoration: const InputDecoration(labelText: 'عنوان ملک', prefixIcon: Icon(Icons.title), border: OutlineInputBorder()), validator: (v) => v == null || v.trim().isEmpty ? 'عنوان الزامی است' : null),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedType,
-                        decoration: const InputDecoration(labelText: 'نوع ملک', prefixIcon: Icon(Icons.home_work), border: OutlineInputBorder()),
-                        items: _propertyTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
-                        onChanged: (v) => setState(() => _selectedType = v!),
-                      ),
+                      DropdownButtonFormField<String>(value: _selectedType, decoration: const InputDecoration(labelText: 'نوع ملک', prefixIcon: Icon(Icons.home_work), border: OutlineInputBorder()), items: _propertyTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(), onChanged: (v) => setState(() => _selectedType = v!)),
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _areaController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'متراژ (متر)', prefixIcon: Icon(Icons.square_foot), border: OutlineInputBorder()),
-                              validator: (v) => v == null || v.isEmpty ? 'الزامی' : (double.tryParse(toEnglishDigits(v)) == null ? 'عدد نامعتبر' : null),
-                            ),
-                          ),
+                          Expanded(child: TextFormField(controller: _areaController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'متراژ (متر)', prefixIcon: Icon(Icons.square_foot), border: OutlineInputBorder()), validator: (v) => v == null || v.isEmpty ? 'الزامی' : (double.tryParse(toEnglishDigits(v)) == null ? 'عدد نامعتبر' : null))),
                           const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _priceController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number,
-                              inputFormatters: [CommaSeparatorFormatter()],
-                              decoration: const InputDecoration(labelText: 'قیمت (تومان)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()),
-                              validator: (v) => v == null || v.isEmpty ? 'الزامی' : (double.tryParse(toEnglishDigits(v.replaceAll(',', ''))) == null ? 'عدد نامعتبر' : null),
-                            ),
-                          ),
+                          Expanded(child: TextFormField(controller: _priceController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, inputFormatters: [CommaSeparatorFormatter()], decoration: const InputDecoration(labelText: 'قیمت (تومان)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()), validator: (v) => v == null || v.isEmpty ? 'الزامی' : (double.tryParse(toEnglishDigits(v.replaceAll(',', ''))) == null ? 'عدد نامعتبر' : null))),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _addressController, textDirection: TextDirection.rtl, maxLines: 3,
-                        decoration: const InputDecoration(labelText: 'آدرس', prefixIcon: Icon(Icons.location_on), border: OutlineInputBorder(), alignLabelWithHint: true),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'آدرس الزامی است' : null,
-                      ),
+                      TextFormField(controller: _addressController, textDirection: TextDirection.rtl, maxLines: 3, decoration: const InputDecoration(labelText: 'آدرس', prefixIcon: Icon(Icons.location_on), border: OutlineInputBorder(), alignLabelWithHint: true), validator: (v) => v == null || v.trim().isEmpty ? 'آدرس الزامی است' : null),
                       const Divider(height: 32),
                       const Text('مشخصات مالک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       const SizedBox(height: 12),
                       TextFormField(controller: _ownerNameController, textDirection: TextDirection.rtl, decoration: const InputDecoration(labelText: 'نام مالک', prefixIcon: Icon(Icons.person_outline), border: OutlineInputBorder())),
                       const SizedBox(height: 16),
                       TextFormField(controller: _ownerPhoneController, textDirection: TextDirection.rtl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'شماره تماس مالک', prefixIcon: Icon(Icons.phone), border: OutlineInputBorder())),
+                      const Divider(height: 32),
+                      const Text('مشخصات مشاور ثبت‌کننده', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)), // جدید
+                      const SizedBox(height: 12),
+                      TextFormField(controller: _agentNameController, textDirection: TextDirection.rtl, decoration: const InputDecoration(labelText: 'نام مشاور', prefixIcon: Icon(Icons.badge), border: OutlineInputBorder()), validator: (v) => v == null || v.trim().isEmpty ? 'نام مشاور الزامی است' : null),
+                      const SizedBox(height: 16),
+                      TextFormField(controller: _agentPhoneController, textDirection: TextDirection.rtl, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'شماره تماس مشاور', prefixIcon: Icon(Icons.phone_android), border: OutlineInputBorder()), validator: (v) => v == null || v.trim().isEmpty ? 'شماره مشاور الزامی است' : null),
                       const SizedBox(height: 24),
                       SizedBox(
                         height: 50,
                         child: ElevatedButton.icon(
                           onPressed: _isLoading ? null : _saveProperty,
                           icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.save, size: 24),
-                          label: Text(_isLoading ? 'در حال ذخیره...' : (_isEditMode ? 'ذخیره تغییرات' : 'ثبت ملک'), style: const TextStyle(fontSize: 18)),
+                          label: Text(_isLoading ? 'در حال ذخیره...' : (_isEditMode ? 'ذخیره تغییرات' : 'ثبت ملک'), style: const TextStyle(fontSize: 18, color: Colors.white)),
                           style: ElevatedButton.styleFrom(backgroundColor: _isEditMode ? Colors.orange[700] : Colors.green[700], foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                         ),
                       ),
