@@ -11,6 +11,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -21,25 +27,17 @@ jobs:
       - name: Create android folder
         run: flutter create . --platforms android --project-name homa_amlak
       
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        
-      - name: Fix Android Configurations
+      - name: Patch Android Configurations
         run: |
-          # ۱. جایگزینی قوی و ساده برای تغییر compileSdk به ۳۵ (هر چیزی بعد از compileSdk باشد را عوض می‌کند)
+          # ۱. تغییر compileSdk به ۳۵ (الزامی برای image_picker)
           sed -i 's/compileSdk.*/compileSdk 35/' android/app/build.gradle
           
           # ۲. تغییر نسخه Kotlin به 1.9.24
           sed -i 's/org\.jetbrains\.kotlin\.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
           sed -i "s/ext\.kotlin_version.*/ext.kotlin_version = '1.9.24'/" android/build.gradle
           
-          # ۳. اضافه کردن مجوزهای دوربین و گالری
+          # ۳. افزودن مجوزهای دوربین و گالری
           sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>' android/app/src/main/AndroidManifest.xml
-
-      - name: Install Android SDK 35 Platform
-        run: |
-          yes | sdkmanager --licenses
-          sdkmanager "platforms;android-35"
 
       - name: Install dependencies
         run: flutter pub get
