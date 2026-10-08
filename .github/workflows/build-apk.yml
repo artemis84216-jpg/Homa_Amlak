@@ -29,8 +29,9 @@ jobs:
       
       - name: Patch Android Configurations
         run: |
-          # ۱. تغییر compileSdk به ۳۵ (الزامی برای image_picker)
+          # ۱. تغییر compileSdk به ۳۵ و اجبار استفاده از Build Tools نسخه ۳۴.۰.۰ (برای رفع خطای aapt2)
           sed -i 's/compileSdk.*/compileSdk 35/' android/app/build.gradle
+          sed -i '/compileSdk 35/a \    buildToolsVersion "34.0.0"' android/app/build.gradle
           
           # ۲. تغییر نسخه Kotlin به 1.9.24
           sed -i 's/org\.jetbrains\.kotlin\.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
