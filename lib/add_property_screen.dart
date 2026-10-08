@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'database_helper.dart';
 
 String toEnglishDigits(String str) {
@@ -30,7 +32,7 @@ class CommaSeparatorFormatter extends TextInputFormatter {
 }
 
 class AddPropertyScreen extends StatefulWidget {
-  final int? propertyId; // اگر null باشد، حالت "افزودن" است، وگرنه حالت "ویرایش"
+  final int? propertyId;
   const AddPropertyScreen({super.key, this.propertyId});
 
   @override
@@ -49,7 +51,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   String _selectedType = 'آپارتمان';
   bool _isLoading = false;
   bool _isEditMode = false;
-  final List<XFile> _images = [];
+  final List<String> _imagePaths = []; // مسیرهای دائمی عکس‌ها
   final ImagePicker _picker = ImagePicker();
   final List<String> _propertyTypes = ['آپارتمان', 'ویلا', 'زمین', 'تجاری', 'مغازه'];
 
@@ -75,13 +77,43 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       _addressController.text = data['address'] ?? '';
       _ownerNameController.text = data['owner_name'] ?? '';
       _ownerPhoneController.text = data['owner_phone'] ?? '';
+      
+      // بارگذاری عکس‌های ذخیره‌شده
+      if (data['images'] != null && data['images'] != '') {
+        try {
+          final List<dynamic> paths = jsonDecode(data['images']);
+          setState(() {
+            _imagePaths.addAll(paths.cast<String>());
+          });
+        } catch (e) {
+          print('Error loading images: $e');
+        }
+      }
     }
     setState(() => _isLoading = false);
   }
 
   Future<void> _pickImage(ImageSource source) async {
     final XFile? image = await _picker.pickImage(source: source);
-    if (image != null) setState(() => _images.add(image));
+    if (image != null) {
+      // ذخیره عکس در پوشه دائمی
+      final dir = await getApplicationDocumentsDirectory();
+      final propertyDir = Directory('${dir.path}/property_images');
+      if (!await propertyDir.exists()) {
+        await propertyDir.create(recursive: true);
+      }
+      
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+      final savedImage = await File(image.path).copy('${propertyDir.path}/$fileName');
+      
+      setState(() => _imagePaths.add(savedImage.path));
+    }
+  }
+
+  void _removeImage(int index) {
+    final file = File(_imagePaths[index]);
+    if (file.existsSync()) file.deleteSync();
+    setState(() => _imagePaths.removeAt(index));
   }
 
   Future<void> _saveProperty() async {
@@ -98,6 +130,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
         'address': _addressController.text.trim(),
         'owner_name': _ownerNameController.text.trim(),
         'owner_phone': _ownerPhoneController.text.trim(),
+        'images': jsonEncode(_imagePaths), // ذخیره مسیر عکس‌ها به صورت JSON
         'status': 'available',
       };
 
@@ -150,24 +183,28 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: [
-                            ..._images.map((img) => Padding(
-                              padding: const EdgeInsets.only(left: 8),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.file(File(img.path), width: 100, height: 100, fit: BoxFit.cover),
-                                  ),
-                                  Positioned(
-                                    top: 0, right: 0,
-                                    child: GestureDetector(
-                                      onTap: () => setState(() => _images.remove(img)),
-                                      child: const CircleAvatar(radius: 12, backgroundColor: Colors.red, child: Icon(Icons.close, size: 16, color: Colors.white)),
+                            ..._imagePaths.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final path = entry.value;
+                              return Padding(
+                                padding: const EdgeInsets.only(left: 8),
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.file(File(path), width: 100, height: 100, fit: BoxFit.cover),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            )),
+                                    Positioned(
+                                      top: 0, right: 0,
+                                      child: GestureDetector(
+                                        onTap: () => _removeImage(index),
+                                        child: const CircleAvatar(radius: 12, backgroundColor: Colors.red, child: Icon(Icons.close, size: 16, color: Colors.white)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
                             Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               IconButton(icon: const Icon(Icons.camera_alt, color: Colors.green, size: 32), onPressed: () => _pickImage(ImageSource.camera)),
                               const Text('دوربین', style: TextStyle(fontSize: 12)),
