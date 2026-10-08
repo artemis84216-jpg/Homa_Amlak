@@ -27,13 +27,19 @@ class PropertyDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(property['title'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.gold)),
+                    Text(
+                      property['title'] ?? '', 
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.gold)
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
                         const Icon(Icons.home_work, color: AppTheme.gold, size: 20),
                         const SizedBox(width: 4),
-                        Text(property['type'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textYellow)),
+                        Text(
+                          property['type'] ?? '', 
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textYellow)
+                        ),
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -56,25 +62,32 @@ class PropertyDetailScreen extends StatelessWidget {
                     _buildInfoRow(Icons.square_foot, 'متراژ', '${formatNumber((property['area'] ?? 0).toInt())} متر مربع'),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.attach_money, 'قیمت', '${formatPrice(property['price'])} تومان', isPrice: true),
+                    
                     if (property['listing_type'] == 'rent' && property['monthly_rent'] != null && (property['monthly_rent'] as num) > 0) ...[
                       const SizedBox(height: 12),
                       _buildInfoRow(Icons.money, 'اجاره ماهیانه', '${formatPrice(property['monthly_rent'])} تومان', isPrice: true),
                     ],
+                    
                     if ((property['bedrooms'] ?? 0) > 0) ...[
                       const SizedBox(height: 12),
                       _buildInfoRow(Icons.bed, 'تعداد خواب', formatNumber(property['bedrooms'].toInt())),
                     ],
+                    
                     if ((property['floor'] ?? 0) > 0) ...[
                       const SizedBox(height: 12),
                       _buildInfoRow(Icons.layers, 'طبقه', '${formatNumber(property['floor'].toInt())} از ${formatNumber((property['total_floors'] ?? 0).toInt())}'),
                     ],
+                    
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.location_on, 'آدرس', property['address'] ?? 'بدون آدرس'),
                     const Divider(height: 32, color: AppTheme.gold),
+                    
                     const Text('مشخصات مالک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.gold)),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.person, 'نام مالک', property['owner_name'] ?? 'ثبت نشده'),
+                    
                     const Divider(height: 32, color: AppTheme.gold),
+                    
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -99,7 +112,9 @@ class PropertyDetailScreen extends StatelessWidget {
                         ],
                       ),
                     ),
+                    
                     const SizedBox(height: 32),
+                    
                     // دکمه تماس با مشاور
                     SizedBox(
                       height: 55,
@@ -115,8 +130,10 @@ class PropertyDetailScreen extends StatelessWidget {
                         label: const Text('تماس با مشاور املاک', style: TextStyle(fontSize: 18)),
                       ),
                     ),
+                    
                     const SizedBox(height: 12),
-                    // دکمه جدید: درخواست بازدید
+                    
+                    // دکمه درخواست بازدید
                     SizedBox(
                       height: 55,
                       child: OutlinedButton.icon(
@@ -126,7 +143,8 @@ class PropertyDetailScreen extends StatelessWidget {
                                   context,
                                   MaterialPageRoute(builder: (_) => RequestViewingScreen(property: property)),
                                 );
-                                if (result == true && mounted) {
+                                // اصلاح خطا: حذف && mounted
+                                if (result == true) {
                                   Navigator.pop(context);
                                 }
                               }
