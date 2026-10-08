@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'agents_management_screen.dart';
 import 'admin_properties_screen.dart';
 import 'reports_screen.dart';
-import 'contracts_screen.dart'; // صفحه جدید
-import 'expenses_screen.dart';  // صفحه جدید
+import 'contracts_screen.dart';
+import 'expenses_screen.dart';
+import 'about_screen.dart';       // جدید
+import 'settings_screen.dart';    // جدید
+import 'backup_screen.dart';      // جدید
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -14,8 +17,8 @@ class AdminDashboard extends StatelessWidget {
       appBar: AppBar(
         title: const Text('پنل مدیریت'),
         backgroundColor: Colors.red[700],
-        centerTitle: true,       // وسط‌چین شدن تیتر
-        foregroundColor: Colors.white, // سفید شدن متن و آیکون‌ها
+        centerTitle: true,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -47,13 +50,13 @@ class AdminDashboard extends StatelessWidget {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
             }),
             _buildCard(context, Icons.settings, 'تنظیمات', Colors.grey, () {
-              _showComingSoon(context, 'تنظیمات');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
             }),
             _buildCard(context, Icons.backup, 'پشتیبان', Colors.indigo, () {
-              _showComingSoon(context, 'پشتیبان‌گیری');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const BackupScreen()));
             }),
             _buildCard(context, Icons.info, 'درباره ما', Colors.cyan, () {
-              _showComingSoon(context, 'درباره ما');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()));
             }),
           ],
         ),
@@ -77,12 +80,6 @@ class AdminDashboard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('بخش $feature در نسخه‌های بعدی فعال می‌شود')),
     );
   }
 }
