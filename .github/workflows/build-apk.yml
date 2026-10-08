@@ -19,9 +19,21 @@ jobs:
           cache: true
       
       - name: Create android folder
-        # تغییر مهم اینجاست: اضافه کردن --project-name homa_amlak
         run: flutter create . --platforms android --project-name homa_amlak
       
+      - name: Patch Android Configurations (Fix SDK, Kotlin & Permissions)
+        run: |
+          # ۱. تغییر نسخه Android SDK به ۳۵ برای سازگاری با image_picker
+          sed -i 's/compileSdk flutter.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
+          sed -i 's/compileSdkVersion flutter.compileSdkVersion/compileSdkVersion 35/g' android/app/build.gradle
+          
+          # ۲. تغییر نسخه Kotlin به 1.9.24
+          sed -i "s/ext.kotlin_version = '.*'/ext.kotlin_version = '1.9.24'/g" android/build.gradle
+          
+          # ۳. اضافه کردن مجوزهای ضروری دوربین و گالری به AndroidManifest.xml
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          sed -i '/<application>/i \    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>' $MANIFEST
+
       - name: Install dependencies
         run: flutter pub get
       
