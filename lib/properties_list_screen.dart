@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:convert';
 import 'database_helper.dart';
 import 'add_property_screen.dart';
 
@@ -94,6 +96,16 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                   itemCount: _properties.length,
                   itemBuilder: (context, index) {
                     final p = _properties[index];
+                    List<String> images = [];
+                    if (p['images'] != null && p['images'] != '') {
+                      try {
+                        final List<dynamic> paths = jsonDecode(p['images']);
+                        images = paths.cast<String>();
+                      } catch (e) {
+                        print('Error parsing images: $e');
+                      }
+                    }
+                    
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: 3,
@@ -105,6 +117,26 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // نمایش عکس‌ها
+                              if (images.isNotEmpty) ...[
+                                SizedBox(
+                                  height: 150,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: images.length,
+                                    itemBuilder: (ctx, i) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(left: 8),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(8),
+                                          child: Image.file(File(images[i]), height: 150, fit: BoxFit.cover),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               Row(
                                 children: [
                                   Container(
