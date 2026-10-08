@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
 
+// تابع کمکی برای تبدیل عدد به فرمت فارسی با جداکننده ۳ رقمی
+String formatToPersianNumber(num number) {
+  String str = number.toString().replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+    (Match m) => '${m[1]},',
+  );
+  return str.replaceAll('0', '۰').replaceAll('1', '۱').replaceAll('2', '۲')
+            .replaceAll('3', '۳').replaceAll('4', '۴').replaceAll('5', '۵')
+            .replaceAll('6', '۶').replaceAll('7', '۷').replaceAll('8', '۸')
+            .replaceAll('9', '۹');
+}
+
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
@@ -34,11 +46,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _availableProperties = properties.where((p) => p['status'] == 'available').length;
 
     final contracts = await db.query('contracts');
-    // اصلاح خطای نوع داده در اینجا:
     _totalIncome = contracts.fold(0.0, (sum, c) => sum + ((c['amount'] as num?)?.toDouble() ?? 0.0));
 
     final expenses = await db.query('expenses');
-    // اصلاح خطای نوع داده در اینجا:
     _totalExpenses = expenses.fold(0.0, (sum, e) => sum + ((e['amount'] as num?)?.toDouble() ?? 0.0));
 
     final agents = await db.query('agents');
@@ -48,20 +58,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() => _isLoading = false);
   }
 
-  String _formatNumber(num number) {
-    return number.toString().replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('گزارشات مالی'),
         backgroundColor: Colors.teal[700],
-        actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _loadReports)],
+        centerTitle: true, // وسط‌چین
+        foregroundColor: Colors.white, // سفید کردن متن و آیکون
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -88,9 +92,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ],
                             ),
                             const Divider(height: 24),
-                            _buildStatRow('کل املاک', _totalProperties.toString(), Colors.blue),
-                            _buildStatRow('املاک موجود', _availableProperties.toString(), Colors.green),
-                            _buildStatRow('املاک فروخته شده', _soldProperties.toString(), Colors.red),
+                            _buildStatRow('کل املاک', formatToPersianNumber(_totalProperties), Colors.blue),
+                            _buildStatRow('املاک موجود', formatToPersianNumber(_availableProperties), Colors.green),
+                            _buildStatRow('املاک فروخته شده', formatToPersianNumber(_soldProperties), Colors.red),
                           ],
                         ),
                       ),
@@ -112,12 +116,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ],
                             ),
                             const Divider(height: 24),
-                            _buildStatRow('کل درآمد', '${_formatNumber(_totalIncome.toInt())} تومان', Colors.green),
-                            _buildStatRow('کل هزینه', '${_formatNumber(_totalExpenses.toInt())} تومان', Colors.red),
+                            _buildStatRow('کل درآمد', '${formatToPersianNumber(_totalIncome.toInt())} تومان', Colors.green),
+                            _buildStatRow('کل هزینه', '${formatToPersianNumber(_totalExpenses.toInt())} تومان', Colors.red),
                             const Divider(height: 16),
                             _buildStatRow(
                               'سود خالص',
-                              '${_formatNumber((_totalIncome - _totalExpenses).toInt())} تومان',
+                              '${formatToPersianNumber((_totalIncome - _totalExpenses).toInt())} تومان',
                               _totalIncome - _totalExpenses >= 0 ? Colors.green : Colors.red,
                               isLarge: true,
                             ),
@@ -142,9 +146,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               ],
                             ),
                             const Divider(height: 24),
-                            _buildStatRow('کل مشاوران', _totalAgents.toString(), Colors.purple),
-                            _buildStatRow('مشاوران فعال', _activeAgents.toString(), Colors.green),
-                            _buildStatRow('مشاوران غیرفعال', (_totalAgents - _activeAgents).toString(), Colors.grey),
+                            _buildStatRow('کل مشاوران', formatToPersianNumber(_totalAgents), Colors.purple),
+                            _buildStatRow('مشاوران فعال', formatToPersianNumber(_activeAgents), Colors.green),
+                            _buildStatRow('مشاوران غیرفعال', formatToPersianNumber(_totalAgents - _activeAgents), Colors.grey),
                           ],
                         ),
                       ),
