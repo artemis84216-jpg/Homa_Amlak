@@ -30,11 +30,11 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
 
   String _formatPrice(dynamic price) {
     if (price == null) return '0';
-    final num = price.toInt();
+    final num = price is int ? price : price.toInt();
     return num.toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
   }
 
   Color _getTypeColor(String type) {
@@ -55,10 +55,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
         title: const Text('لیست املاک'),
         backgroundColor: Colors.blue[700],
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadProperties,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadProperties),
         ],
       ),
       body: _isLoading
@@ -70,10 +67,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                     children: [
                       Icon(Icons.home_work, size: 80, color: Colors.grey[400]),
                       const SizedBox(height: 16),
-                      Text(
-                        'هنوز ملکی ثبت نشده',
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                      ),
+                      Text('هنوز ملکی ثبت نشده', style: TextStyle(fontSize: 18, color: Colors.grey[600])),
                       const SizedBox(height: 8),
                       const Text('از دکمه + برای ثبت ملک جدید استفاده کنید'),
                     ],
@@ -127,10 +121,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                               ],
                             ),
                             const SizedBox(height: 12),
-                            Text(
-                              p['title'] ?? '',
-                              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
+                            Text(p['title'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 8),
                             Row(
                               children: [
@@ -156,7 +147,7 @@ class _PropertiesListScreenState extends State<PropertiesListScreen> {
                                 Expanded(
                                   child: Text(
                                     p['address'] ?? '',
-                                    style: const TextStyle(color: Colors.grey[700]),
+                                    style: TextStyle(color: Colors.grey[700]), // const حذف شد
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
