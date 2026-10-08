@@ -153,9 +153,15 @@ class DatabaseHelper {
     return await db.insert('viewings', viewing);
   }
 
-  Future<List<Map<String, dynamic>>> getAllViewings() async {
+    Future<List<Map<String, dynamic>>> getAllViewings() async {
     final db = await instance.database;
-    return await db.query('viewings', orderBy: 'id DESC');
+    // استفاده از JOIN برای آوردن نام ملک همراه با درخواست بازدید
+    return await db.rawQuery('''
+      SELECT v.*, p.title as property_title 
+      FROM viewings v 
+      LEFT JOIN properties p ON v.property_id = p.id 
+      ORDER BY v.id DESC
+    ''');
   }
 
   Future<List<Map<String, dynamic>>> getViewingsByAgent(String agentName) async {
