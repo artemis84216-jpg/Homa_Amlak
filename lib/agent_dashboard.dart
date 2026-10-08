@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'properties_list_screen.dart';
+import 'add_property_screen.dart';
 
 class AgentDashboard extends StatelessWidget {
   const AgentDashboard({super.key});
@@ -22,23 +24,35 @@ class AgentDashboard extends StatelessWidget {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         children: [
-          _buildCard(Icons.add_home, 'ثبت ملک', Colors.green),
-          _buildCard(Icons.home, 'املاک من', Colors.blue),
-          _buildCard(Icons.people, 'مشتریان', Colors.orange),
-          _buildCard(Icons.calendar_today, 'بازدیدها', Colors.purple),
-          _buildCard(Icons.description, 'قراردادها', Colors.teal),
-          _buildCard(Icons.attach_money, 'کمیسیون', Colors.amber),
+          _buildCard(context, Icons.add_home, 'ثبت ملک', Colors.green, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const AddPropertyScreen()));
+          }),
+          _buildCard(context, Icons.home, 'املاک من', Colors.blue, () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const PropertiesListScreen()));
+          }),
+          _buildCard(context, Icons.people, 'مشتریان', Colors.orange, () {
+            _showComingSoon(context, 'مشتریان');
+          }),
+          _buildCard(context, Icons.calendar_today, 'بازدیدها', Colors.purple, () {
+            _showComingSoon(context, 'بازدیدها');
+          }),
+          _buildCard(context, Icons.description, 'قراردادها', Colors.teal, () {
+            _showComingSoon(context, 'قراردادها');
+          }),
+          _buildCard(context, Icons.attach_money, 'کمیسیون', Colors.amber, () {
+            _showComingSoon(context, 'کمیسیون');
+          }),
         ],
       ),
     );
   }
 
-  Widget _buildCard(IconData icon, String title, Color color) {
+  Widget _buildCard(BuildContext context, IconData icon, String title, Color color, VoidCallback onTap) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -49,6 +63,12 @@ class AgentDashboard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('بخش $feature به زودی اضافه می‌شود')),
     );
   }
 }
