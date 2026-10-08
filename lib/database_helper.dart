@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -24,7 +24,7 @@ class DatabaseHelper {
       CREATE TABLE properties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL, type TEXT, area REAL, price REAL, address TEXT,
-        owner_name TEXT, owner_phone TEXT,
+        owner_name TEXT, owner_phone TEXT, images TEXT,
         status TEXT DEFAULT 'available', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -39,6 +39,9 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE properties ADD COLUMN owner_name TEXT');
       await db.execute('ALTER TABLE properties ADD COLUMN owner_phone TEXT');
+    }
+    if (oldVersion < 3) {
+      await db.execute('ALTER TABLE properties ADD COLUMN images TEXT');
     }
   }
 
