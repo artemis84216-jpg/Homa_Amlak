@@ -21,20 +21,25 @@ jobs:
       - name: Create android folder
         run: flutter create . --platforms android --project-name homa_amlak
       
-      - name: Fix Android SDK, Kotlin and Permissions
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Fix Android Configurations
         run: |
-          # ۱. اصلاح نسخه Kotlin در settings.gradle (ساختار جدید فلاتر ۳.۱۹+)
-          perl -pi -e 's/id "org\.jetbrains\.kotlin\.android" version ".*"/id "org.jetbrains.kotlin.android" version "1.9.24"/g' android/settings.gradle
+          # ۱. جایگزینی قوی و ساده برای تغییر compileSdk به ۳۵ (هر چیزی بعد از compileSdk باشد را عوض می‌کند)
+          sed -i 's/compileSdk.*/compileSdk 35/' android/app/build.gradle
           
-          # ۲. اصلاح نسخه Kotlin در build.gradle (ساختار قدیمی - جهت اطمینان)
-          perl -pi -e 's/ext\.kotlin_version\s*=\s*".*"/ext.kotlin_version = "1.9.24"/g' android/build.gradle
+          # ۲. تغییر نسخه Kotlin به 1.9.24
+          sed -i 's/org\.jetbrains\.kotlin\.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
+          sed -i "s/ext\.kotlin_version.*/ext.kotlin_version = '1.9.24'/" android/build.gradle
           
-          # ۳. تغییر compileSdk به ۳۵ برای سازگاری با image_picker
-          perl -pi -e 's/compileSdk\s+flutter\.compileSdkVersion/compileSdk 35/g' android/app/build.gradle
-          perl -pi -e 's/compileSdkVersion\s+flutter\.compileSdkVersion/compileSdkVersion 35/g' android/app/build.gradle
-          
-          # ۴. اضافه کردن مجوزهای دوربین و گالری
-          perl -pi -e 's/<\/manifest>/    <uses-permission android:name="android.permission.CAMERA"\/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"\/>\n<\/manifest>/g' android/app/src/main/AndroidManifest.xml
+          # ۳. اضافه کردن مجوزهای دوربین و گالری
+          sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>' android/app/src/main/AndroidManifest.xml
+
+      - name: Install Android SDK 35 Platform
+        run: |
+          yes | sdkmanager --licenses
+          sdkmanager "platforms;android-35"
 
       - name: Install dependencies
         run: flutter pub get
