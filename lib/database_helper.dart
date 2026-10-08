@@ -16,14 +16,14 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 6, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 7, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE properties (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL, type TEXT, area REAL, price REAL, address TEXT,
+        title TEXT NOT NULL, type TEXT, area REAL, price REAL, monthly_rent REAL DEFAULT 0, address TEXT,
         owner_name TEXT, owner_phone TEXT,
         agent_name TEXT, agent_phone TEXT,
         bedrooms INTEGER DEFAULT 0, floor INTEGER DEFAULT 0, total_floors INTEGER DEFAULT 0,
@@ -58,6 +58,9 @@ class DatabaseHelper {
       await db.execute('ALTER TABLE properties ADD COLUMN floor INTEGER DEFAULT 0');
       await db.execute('ALTER TABLE properties ADD COLUMN total_floors INTEGER DEFAULT 0');
       await db.execute('ALTER TABLE properties ADD COLUMN listing_type TEXT DEFAULT "sale"');
+    }
+    if (oldVersion < 7) {
+      await db.execute('ALTER TABLE properties ADD COLUMN monthly_rent REAL DEFAULT 0');
     }
   }
 
