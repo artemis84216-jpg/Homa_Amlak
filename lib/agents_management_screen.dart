@@ -58,6 +58,8 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
       appBar: AppBar(
         title: const Text('مدیریت مشاوران'),
         backgroundColor: Colors.purple[700],
+        centerTitle: true, // وسط‌چین
+        foregroundColor: Colors.white, // سفید
         actions: [IconButton(icon: const Icon(Icons.refresh), onPressed: _loadAgents)],
       ),
       body: _isLoading
@@ -100,9 +102,9 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(agent['name'] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                        Text(agent['name']?.toString() ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                                         const SizedBox(height: 4),
-                                        Text(agent['phone'] ?? '', style: TextStyle(color: Colors.grey[700])),
+                                        Text(agent['phone']?.toString() ?? '', style: TextStyle(color: Colors.grey[700])),
                                       ],
                                     ),
                                   ),
@@ -131,7 +133,7 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
                                   const SizedBox(width: 16),
                                   const Icon(Icons.attach_money, size: 16, color: Colors.grey),
                                   const SizedBox(width: 4),
-                                  Text('حقوق: ${agent['base_salary']?.toInt() ?? 0} تومان'),
+                                  Text('حقوق: ${(agent['base_salary']?.toInt() ?? 0).toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} تومان'),
                                 ],
                               ),
                               if (agent['national_id'] != null && (agent['national_id'] as String).isNotEmpty) ...[
@@ -157,7 +159,7 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
                                         if (result == true) _loadAgents();
                                       },
                                       icon: const Icon(Icons.edit),
-                                      label: const Text('ویرایش'),
+                                      label: const Text('ویرایش', style: TextStyle(color: Colors.white)),
                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                                     ),
                                   ),
@@ -166,7 +168,7 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
                                     child: ElevatedButton.icon(
                                       onPressed: () => _deleteAgent(agent['id']),
                                       icon: const Icon(Icons.delete),
-                                      label: const Text('حذف'),
+                                      label: const Text('حذف', style: TextStyle(color: Colors.white)),
                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                                     ),
                                   ),
@@ -185,6 +187,7 @@ class _AgentsManagementScreenState extends State<AgentsManagementScreen> {
           if (result == true) _loadAgents();
         },
         backgroundColor: Colors.purple[700],
+        foregroundColor: Colors.white, // <-- اصلاح ۲: سفید شدن نوشته دکمه
         icon: const Icon(Icons.add),
         label: const Text('افزودن مشاور'),
       ),
