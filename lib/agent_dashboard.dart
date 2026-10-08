@@ -45,7 +45,7 @@ class AgentDashboard extends StatelessWidget {
               Navigator.push(context, MaterialPageRoute(builder: (_) => AddPropertyScreen(currentAgent: agentData)));
             }),
             _buildCard(context, Icons.home, 'املاک من', AppTheme.gold, () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => PropertiesListScreen(agentId: agentData['id'])));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => PropertiesListScreen(currentAgent: agentData)));
             }),
             _buildCard(context, Icons.people, 'مشتریان', AppTheme.gold, () { _showComingSoon(context, 'مشتریان'); }),
             _buildCard(context, Icons.calendar_today, 'بازدیدها', AppTheme.gold, () { _showComingSoon(context, 'بازدیدها'); }),
