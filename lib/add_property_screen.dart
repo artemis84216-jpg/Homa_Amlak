@@ -21,6 +21,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   final _titleController = TextEditingController();
   final _areaController = TextEditingController();
   final _priceController = TextEditingController();
+  final _monthlyRentController = TextEditingController(); // <-- فیلد جدید اجاره ماهیانه
   final _addressController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
@@ -31,7 +32,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   final _totalFloorsController = TextEditingController();
   
   String _selectedType = 'آپارتمان';
-  String _listingType = 'sale'; // sale (فروش) یا rent (اجاره)
+  String _listingType = 'sale';
   bool _isPublic = true;
   bool _isLoading = false;
   bool _isEditMode = false;
@@ -58,8 +59,16 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       _selectedType = data['type'] ?? 'آپارتمان';
       _listingType = data['listing_type'] ?? 'sale';
       _areaController.text = data['area']?.toString() ?? '';
+      
       final price = data['price']?.toInt() ?? 0;
       _priceController.text = price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
+      
+      // بارگذاری اجاره ماهیانه
+      final monthlyRent = data['monthly_rent']?.toInt() ?? 0;
+      _monthlyRentController.text = monthlyRent > 0 
+          ? monthlyRent.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')
+          : '';
+      
       _addressController.text = data['address'] ?? '';
       _ownerNameController.text = data['owner_name'] ?? '';
       _ownerPhoneController.text = data['owner_phone'] ?? '';
@@ -104,11 +113,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
     try {
       String cleanPrice = toEnglishDigits(_priceController.text.replaceAll(',', ''));
+      String cleanMonthlyRent = toEnglishDigits(_monthlyRentController.text.replaceAll(',', ''));
+      
       final property = {
         'title': _titleController.text.trim(),
         'type': _selectedType,
         'area': double.parse(toEnglishDigits(_areaController.text)),
         'price': double.parse(cleanPrice),
+        'monthly_rent': _listingType == 'rent' ? double.parse(cleanMonthlyRent.isEmpty ? '0' : cleanMonthlyRent) : 0,
         'address': _addressController.text.trim(),
         'owner_name': _ownerNameController.text.trim(),
         'owner_phone': _ownerPhoneController.text.trim(),
@@ -197,7 +209,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                       ),
                       const Divider(height: 32, color: AppTheme.gold),
                       
-                      // دکمه‌های انتخاب نوع معامله
                       const Text('نوع معامله', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                       const SizedBox(height: 12),
                       Row(
@@ -262,14 +273,29 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                             child: TextFormField(
                               controller: _priceController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite),
                               inputFormatters: [CommaSeparatorFormatter()], 
-                              decoration: InputDecoration(labelText: _listingType == 'sale' ? 'قیمت (تومان)' : 'رهن (تومان)', prefixIcon: Icon(Icons.attach_money, color: AppTheme.gold)), 
+                              decoration: InputDecoration(labelText: _listingType == 'sale' ? 'قیمت فروش (تومان)' : 'رهن کامل (تومان)', prefixIcon: Icon(Icons.attach_money, color: AppTheme.gold)), 
                               validator: (v) => v == null || v.isEmpty ? 'الزامی' : (double.tryParse(toEnglishDigits(v.replaceAll(',', ''))) == null ? 'عدد نامعتبر' : null)
                             )
                           ),
                         ],
                       ),
+                      
+                      // فیلد اجاره ماهیانه - فقط در حالت اجاره نمایش داده می‌شود
+                      if (_listingType == 'rent') ...[
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _monthlyRentController, textDirection: TextDirection.rtl, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite),
+                          inputFormatters: [CommaSeparatorFormatter()], 
+                          decoration: const InputDecoration(labelText: 'اجاره ماهیانه (تومان)', prefixIcon: Icon(Icons.money, color: AppTheme.gold)), 
+                          validator: (v) {
+                            if (_listingType == 'rent' && (v == null || v.isEmpty)) return 'اجاره ماهیانه الزامی است';
+                            if (v != null && v.isNotEmpty && double.tryParse(toEnglishDigits(v.replaceAll(',', ''))) == null) return 'عدد نامعتبر';
+                            return null;
+                          }
+                        ),
+                      ],
+                      
                       const SizedBox(height: 16),
-                      // فیلدهای خواب، طبقه، کل طبقات
                       Row(
                         children: [
                           Expanded(
