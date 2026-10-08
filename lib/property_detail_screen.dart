@@ -1,37 +1,17 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
-import 'dart:convert';
+import 'app_utils.dart';
 
 class PropertyDetailScreen extends StatelessWidget {
   final Map<String, dynamic> property;
   const PropertyDetailScreen({super.key, required this.property});
 
-  String _formatPrice(dynamic price) {
-    if (price == null) return '۰';
-    final num priceNum = price is int ? price : (price is double ? price.toInt() : 0);
-    String formatted = priceNum.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
-    return formatted.replaceAll('0', '۰').replaceAll('1', '۱').replaceAll('2', '۲')
-        .replaceAll('3', '۳').replaceAll('4', '۴').replaceAll('5', '۵')
-        .replaceAll('6', '۶').replaceAll('7', '۷').replaceAll('8', '۸')
-        .replaceAll('9', '۹');
-  }
-
   @override
   Widget build(BuildContext context) {
-    List<String> images = [];
-    if (property['images'] != null && property['images'] != '') {
-      try {
-        final List<dynamic> paths = jsonDecode(property['images']);
-        images = paths.cast<String>();
-      } catch (e) {}
-    }
-
     return Scaffold(
+      backgroundColor: AppTheme.backgroundBlack,
       appBar: AppBar(
         title: const Text('جزئیات ملک'),
-        backgroundColor: Colors.blue[700],
         centerTitle: true,
-        foregroundColor: Colors.white,
       ),
       body: Directionality(
         textDirection: TextDirection.rtl,
@@ -39,77 +19,67 @@ class PropertyDetailScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (images.isNotEmpty)
-                SizedBox(
-                  height: 250,
-                  child: PageView.builder(
-                    itemCount: images.length,
-                    itemBuilder: (context, index) {
-                      return Image.file(File(images[index]), fit: BoxFit.cover);
-                    },
-                  ),
-                )
-              else
-                Container(
-                  height: 250,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.image, size: 80, color: Colors.grey),
-                ),
+              // استفاده از گالری جدید
+              PropertyImageGallery(imagesJson: property['images']),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(property['title'] ?? '', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text(
+                      property['title'] ?? '',
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.gold),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.home_work, color: Colors.blue[700], size: 20),
+                        const Icon(Icons.home_work, color: AppTheme.gold, size: 20),
                         const SizedBox(width: 4),
-                        Text(property['type'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Text(property['type'] ?? '', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textYellow)),
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: property['status'] == 'available' ? Colors.green[100] : Colors.grey[300],
+                            color: property['status'] == 'available' ? Colors.green.withOpacity(0.2) : Colors.grey.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: property['status'] == 'available' ? Colors.green : Colors.grey),
                           ),
                           child: Text(
                             property['status'] == 'available' ? 'موجود' : 'فروخته شده',
-                            style: TextStyle(color: property['status'] == 'available' ? Colors.green[800] : Colors.grey[700], fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: property['status'] == 'available' ? Colors.green : Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 32),
-                    _buildInfoRow(Icons.square_foot, 'متراژ', '${property['area']} متر مربع'),
+                    const Divider(height: 32, color: AppTheme.gold),
+                    _buildInfoRow(Icons.square_foot, 'متراژ', '${formatNumber((property['area'] ?? 0).toInt())} متر مربع'),
                     const SizedBox(height: 12),
-                    _buildInfoRow(Icons.attach_money, 'قیمت', '${_formatPrice(property['price'])} تومان', isPrice: true),
+                    _buildInfoRow(Icons.attach_money, 'قیمت', '${formatPrice(property['price'])} تومان', isPrice: true),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.location_on, 'آدرس', property['address'] ?? 'بدون آدرس'),
-                    const Divider(height: 32),
-                    
-                    const Text('مشخصات مالک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Divider(height: 32, color: AppTheme.gold),
+                    const Text('مشخصات مالک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.gold)),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.person, 'نام مالک', property['owner_name'] ?? 'ثبت نشده'),
-                    
-                    const Divider(height: 32),
-                    
+                    const Divider(height: 32, color: AppTheme.gold),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue[50],
+                        color: AppTheme.cardBlack,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue[200]!),
+                        border: Border.all(color: AppTheme.gold, width: 1),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
+                          const Row(
                             children: [
-                              Icon(Icons.badge, color: Colors.blue[700], size: 24),
-                              const SizedBox(width: 8),
-                              Text('مشاور ثبت‌کننده این فایل', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[800])),
+                              Icon(Icons.badge, color: AppTheme.gold, size: 24),
+                              SizedBox(width: 8),
+                              Text('مشاور ثبت‌کننده این فایل', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.gold)),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -119,7 +89,6 @@ class PropertyDetailScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 32),
                     SizedBox(
                       height: 55,
@@ -127,17 +96,15 @@ class PropertyDetailScreen extends StatelessWidget {
                         onPressed: property['status'] == 'available' && property['agent_phone'] != null
                             ? () {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('شماره تماس مشاور: ${property['agent_phone']}')),
+                                  SnackBar(
+                                    content: Text('شماره تماس مشاور: ${property['agent_phone']}'),
+                                    backgroundColor: AppTheme.gold,
+                                  ),
                                 );
                               }
                             : null,
                         icon: const Icon(Icons.phone, size: 24),
-                        label: const Text('تماس با مشاور املاک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[700],
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
+                        label: const Text('تماس با مشاور املاک', style: TextStyle(fontSize: 18)),
                       ),
                     ),
                   ],
@@ -154,15 +121,22 @@ class PropertyDetailScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: Colors.grey[600], size: 24),
+        Icon(icon, color: AppTheme.gold, size: 24),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+              Text(label, style: const TextStyle(color: AppTheme.textGrey, fontSize: 14)),
               const SizedBox(height: 4),
-              Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: isPrice ? Colors.green[800] : Colors.black87)),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: isPrice ? AppTheme.textYellow : AppTheme.textWhite,
+                ),
+              ),
             ],
           ),
         ),
