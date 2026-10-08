@@ -89,14 +89,12 @@ class PropertyDetailScreen extends StatelessWidget {
                     _buildInfoRow(Icons.location_on, 'آدرس', property['address'] ?? 'بدون آدرس'),
                     const Divider(height: 32),
                     
-                    // بخش مشخصات مالک (فقط نام، بدون شماره)
                     const Text('مشخصات مالک', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
                     _buildInfoRow(Icons.person, 'نام مالک', property['owner_name'] ?? 'ثبت نشده'),
                     
                     const Divider(height: 32),
                     
-                    // بخش مشخصات مشاور (نام و شماره تماس)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -171,4 +169,4 @@ class PropertyDetailScreen extends StatelessWidget {
       ],
     );
   }
-}/
+}
