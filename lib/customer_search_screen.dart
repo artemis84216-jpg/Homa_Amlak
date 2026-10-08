@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:convert';
 import 'database_helper.dart';
 import 'property_detail_screen.dart';
 
@@ -40,7 +42,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         bool matchesSearch = p['title'].toString().toLowerCase().contains(query) ||
                              p['address'].toString().toLowerCase().contains(query);
         bool matchesType = _selectedType == 'همه' || p['type'] == _selectedType;
-        bool isAvailable = p['status'] == 'available'; // مشتری فقط املاک موجود را ببیند
+        bool isAvailable = p['status'] == 'available';
         return matchesSearch && matchesType && isAvailable;
       }).toList();
     });
@@ -54,6 +56,21 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         .replaceAll('3', '۳').replaceAll('4', '۴').replaceAll('5', '۵')
         .replaceAll('6', '۶').replaceAll('7', '۷').replaceAll('8', '۸')
         .replaceAll('9', '۹');
+  }
+
+  void _showFullImage(BuildContext context, String imagePath) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            child: Image.file(File(imagePath), fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -140,20 +157,27 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                           itemCount: _filteredProperties.length,
                           itemBuilder: (context, index) {
                             final p = _filteredProperties[index];
+                            List<String> images = [];
+                            if (p['images'] != null && p['images'] != '') {
+                              try {
+                                final List<dynamic> paths = jsonDecode(p['images']);
+                                images = paths.cast<String>();
+                              } catch (e) {}
+                            }
+
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               elevation: 2,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(12),
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: Colors.grey[300],
-                                    child: const Icon(Icons.home, color: Colors.grey, size: 40),
-                                    // نکته: برای نمایش عکس واقعی می‌توان کد Image.file را اینجا گذاشت، اما برای سرعت لیست، آیکون کافی است.
+                                leading: GestureDetector(
+                                  onTap: images.isNotEmpty ? () => _showFullImage(context, images[0]) : null,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: images.isNotEmpty
+                                        ? Image.file(File(images[0]), width: 80, height: 80, fit: BoxFit.cover)
+                                        : Container(width: 80, height: 80, color: Colors.grey[300], child: const Icon(Icons.home, color: Colors.grey, size: 40)),
                                   ),
                                 ),
                                 title: Text(p['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
