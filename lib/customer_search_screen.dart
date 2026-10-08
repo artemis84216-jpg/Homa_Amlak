@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'database_helper.dart';
 import 'property_detail_screen.dart';
+import 'app_utils.dart';
 
 class CustomerSearchScreen extends StatefulWidget {
   const CustomerSearchScreen({super.key});
@@ -39,23 +40,13 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
     String query = _searchController.text.trim().toLowerCase();
     setState(() {
       _filteredProperties = _allProperties.where((p) {
-        bool matchesSearch = p['title'].toString().toLowerCase().contains(query) ||
-                             p['address'].toString().toLowerCase().contains(query);
+        bool matchesSearch = p['title'].toString().toLowerCase().contains(query) || p['address'].toString().toLowerCase().contains(query);
         bool matchesType = _selectedType == 'همه' || p['type'] == _selectedType;
         bool isAvailable = p['status'] == 'available';
-        return matchesSearch && matchesType && isAvailable;
+        bool isPublic = p['is_public'] == 1 || p['is_public'] == true;
+        return matchesSearch && matchesType && isAvailable && isPublic;
       }).toList();
     });
-  }
-
-  String _formatPrice(dynamic price) {
-    if (price == null) return '۰';
-    final num priceNum = price is int ? price : (price is double ? price.toInt() : 0);
-    String formatted = priceNum.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
-    return formatted.replaceAll('0', '۰').replaceAll('1', '۱').replaceAll('2', '۲')
-        .replaceAll('3', '۳').replaceAll('4', '۴').replaceAll('5', '۵')
-        .replaceAll('6', '۶').replaceAll('7', '۷').replaceAll('8', '۸')
-        .replaceAll('9', '۹');
   }
 
   void _showFullImage(BuildContext context, String imagePath) {
@@ -65,9 +56,7 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
         backgroundColor: Colors.black,
         child: GestureDetector(
           onTap: () => Navigator.pop(context),
-          child: InteractiveViewer(
-            child: Image.file(File(imagePath), fit: BoxFit.contain),
-          ),
+          child: InteractiveViewer(child: Image.file(File(imagePath), fit: BoxFit.contain)),
         ),
       ),
     );
@@ -76,12 +65,8 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('جستجوی املاک'),
-        backgroundColor: Colors.blue[700],
-        centerTitle: true,
-        foregroundColor: Colors.white,
-      ),
+      backgroundColor: AppTheme.backgroundBlack,
+      appBar: AppBar(title: const Text('جستجوی املاک'), centerTitle: true),
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Column(
@@ -93,18 +78,13 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                   TextField(
                     controller: _searchController,
                     textDirection: TextDirection.rtl,
+                    style: const TextStyle(color: AppTheme.textWhite),
                     decoration: InputDecoration(
                       hintText: 'جستجو در عنوان یا آدرس...',
-                      prefixIcon: const Icon(Icons.search),
+                      prefixIcon: const Icon(Icons.search, color: AppTheme.gold),
                       suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(icon: const Icon(Icons.clear), onPressed: () {
-                              _searchController.clear();
-                              _applyFilters();
-                            })
+                          ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.gold), onPressed: () { _searchController.clear(); _applyFilters(); })
                           : null,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      filled: true,
-                      fillColor: Colors.grey[100],
                     ),
                     onChanged: (_) => _applyFilters(),
                   ),
@@ -122,13 +102,15 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                           child: FilterChip(
                             label: Text(type),
                             selected: isSelected,
-                            onSelected: (selected) {
-                              setState(() => _selectedType = type);
-                              _applyFilters();
-                            },
-                            selectedColor: Colors.blue[100],
-                            checkmarkColor: Colors.blue[700],
-                            labelStyle: TextStyle(color: isSelected ? Colors.blue[800] : Colors.grey[700], fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+                            onSelected: (selected) { setState(() => _selectedType = type); _applyFilters(); },
+                            selectedColor: AppTheme.gold,
+                            backgroundColor: AppTheme.cardBlack,
+                            checkmarkColor: Colors.black,
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.black : AppTheme.gold,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                            side: const BorderSide(color: AppTheme.gold),
                           ),
                         );
                       },
@@ -137,18 +119,18 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, color: AppTheme.gold),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.gold))
                   : _filteredProperties.isEmpty
                       ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                              const Icon(Icons.search_off, size: 64, color: AppTheme.textGrey),
                               const SizedBox(height: 16),
-                              Text('ملکی با این مشخصات یافت نشد', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                              Text('ملکی با این مشخصات یافت نشد', style: TextStyle(color: AppTheme.textGrey, fontSize: 16)),
                             ],
                           ),
                         )
@@ -167,8 +149,6 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
 
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(12),
                                 leading: GestureDetector(
@@ -177,25 +157,22 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                     child: images.isNotEmpty
                                         ? Image.file(File(images[0]), width: 80, height: 80, fit: BoxFit.cover)
-                                        : Container(width: 80, height: 80, color: Colors.grey[300], child: const Icon(Icons.home, color: Colors.grey, size: 40)),
+                                        : Container(width: 80, height: 80, color: AppTheme.cardBlack, child: const Icon(Icons.home, color: AppTheme.textGrey, size: 40)),
                                   ),
                                 ),
-                                title: Text(p['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                title: Text(p['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: 4),
-                                    Text('${p['area']} متر | ${p['type']}', style: TextStyle(color: Colors.grey[600])),
+                                    Text('${formatNumber((p['area'] ?? 0).toInt())} متر | ${p['type']}', style: const TextStyle(color: AppTheme.textGrey)),
                                     const SizedBox(height: 4),
-                                    Text('${_formatPrice(p['price'])} تومان', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                                    Text('${formatPrice(p['price'])} تومان', style: const TextStyle(color: AppTheme.textYellow, fontWeight: FontWeight.bold)),
                                   ],
                                 ),
-                                trailing: const Icon(Icons.chevron_left, color: Colors.grey),
+                                trailing: const Icon(Icons.chevron_left, color: AppTheme.gold),
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => PropertyDetailScreen(property: p)),
-                                  );
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => PropertyDetailScreen(property: p)));
                                 },
                               ),
                             );
