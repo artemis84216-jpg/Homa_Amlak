@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'agents_management_screen.dart';
 import 'admin_properties_screen.dart';
 import 'reports_screen.dart';
+import 'contracts_screen.dart'; // صفحه جدید
+import 'expenses_screen.dart';  // صفحه جدید
 
 class AdminDashboard extends StatelessWidget {
   const AdminDashboard({super.key});
@@ -10,8 +12,10 @@ class AdminDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('پنل مدیر'),
+        title: const Text('پنل مدیریت'),
         backgroundColor: Colors.red[700],
+        centerTitle: true,       // وسط‌چین شدن تیتر
+        foregroundColor: Colors.white, // سفید شدن متن و آیکون‌ها
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -34,13 +38,10 @@ class AdminDashboard extends StatelessWidget {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPropertiesScreen()));
             }),
             _buildCard(context, Icons.description, 'قراردادها', Colors.orange, () {
-              _showComingSoon(context, 'قراردادها');
-            }),
-            _buildCard(context, Icons.payment, 'پرداخت‌ها', Colors.purple, () {
-              _showComingSoon(context, 'پرداخت‌ها');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ContractsScreen()));
             }),
             _buildCard(context, Icons.receipt_long, 'هزینه‌ها', Colors.red, () {
-              _showComingSoon(context, 'هزینه‌ها');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen()));
             }),
             _buildCard(context, Icons.bar_chart, 'گزارشات', Colors.teal, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
@@ -50,6 +51,9 @@ class AdminDashboard extends StatelessWidget {
             }),
             _buildCard(context, Icons.backup, 'پشتیبان', Colors.indigo, () {
               _showComingSoon(context, 'پشتیبان‌گیری');
+            }),
+            _buildCard(context, Icons.info, 'درباره ما', Colors.cyan, () {
+              _showComingSoon(context, 'درباره ما');
             }),
           ],
         ),
@@ -78,7 +82,7 @@ class AdminDashboard extends StatelessWidget {
 
   void _showComingSoon(BuildContext context, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('بخش $feature به زودی اضافه می‌شود')),
+      SnackBar(content: Text('بخش $feature در نسخه‌های بعدی فعال می‌شود')),
     );
   }
 }
