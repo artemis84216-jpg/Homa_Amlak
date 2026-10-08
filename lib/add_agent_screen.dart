@@ -45,13 +45,14 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
     final result = await db.query('agents', where: 'id = ?', whereArgs: [widget.agentId]);
     if (result.isNotEmpty) {
       final data = result.first;
-      _nameController.text = data['name'] ?? '';
-      _phoneController.text = data['phone'] ?? '';
-      _nationalIdController.text = data['national_id'] ?? '';
+      // اصلاح خطای نوع داده با اضافه کردن ?.toString()
+      _nameController.text = data['name']?.toString() ?? '';
+      _phoneController.text = data['phone']?.toString() ?? '';
+      _nationalIdController.text = data['national_id']?.toString() ?? '';
       _commissionController.text = data['commission_rate']?.toString() ?? '0';
       _salaryController.text = data['base_salary']?.toString() ?? '0';
-      _notesController.text = data['notes'] ?? '';
-      _status = data['status'] ?? 'active';
+      _notesController.text = data['notes']?.toString() ?? '';
+      _status = data['status']?.toString() ?? 'active';
     }
     setState(() => _isLoading = false);
   }
