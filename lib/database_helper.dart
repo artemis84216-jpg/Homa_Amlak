@@ -271,6 +271,27 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.delete('plans', where: 'id = ?', whereArgs: [id]);
   }
+    // --- متدهای دعوت‌نامه‌ها ---
+  Future<int> insertInvitation(Map<String, dynamic> invitation) async {
+    final db = await instance.database;
+    return await db.insert('invitations', invitation);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllInvitations() async {
+    final db = await instance.database;
+    return await db.query('invitations', orderBy: 'id DESC');
+  }
+
+  Future<Map<String, dynamic>?> getInvitationByCode(String code) async {
+    final db = await instance.database;
+    final result = await db.query('invitations', where: 'code = ?', whereArgs: [code]);
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<int> markInvitationAsUsed(int id, String deviceId) async {
+    final db = await instance.database;
+    return await db.update('invitations', {'is_used': 1, 'used_by_device_id': deviceId}, where: 'id = ?', whereArgs: [id]);
+  }
 
   // --- پاک کردن دیتابیس ---
   Future<void> resetDatabase() async {
