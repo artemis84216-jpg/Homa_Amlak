@@ -9,6 +9,9 @@ import 'about_screen.dart';
 import 'settings_screen.dart';
 import 'backup_screen.dart';
 import 'device_info_helper.dart';
+import 'license_helper.dart';
+import 'license_input_screen.dart';
+import 'database_helper.dart';
 import 'app_utils.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -20,16 +23,65 @@ class AdminDashboard extends StatefulWidget {
 
 class _AdminDashboardState extends State<AdminDashboard> {
   String _deviceId = 'در حال دریافت...';
+  Map<String, dynamic>? _license;
+  String _planName = 'بدون لایسنس';
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadDeviceId();
+    _loadData();
   }
 
-  Future<void> _loadDeviceId() async {
+  Future<void> _loadData() async {
     final id = await DeviceInfoHelper.instance.getDeviceId();
-    setState(() => _deviceId = id);
+    final license = await LicenseHelper.getLicense();
+    
+    String planName = 'بدون لایسنس';
+    if (license != null && license['isActive'] == true) {
+      final plans = await DatabaseHelper.instance.getAllPlans();
+      final plan = plans.firstWhere((p) => p['id'] == license['planId'], orElse: () => {});
+      if (plan.isNotEmpty) planName = plan['name'] ?? 'پلن نامشخص';
+    }
+
+    setState(() {
+      _deviceId = id;
+      _license = license;
+      _planName = planName;
+      _isLoading = false;
+    });
+
+    // نمایش هشدار ۲ روز قبل از انقضا
+    if (license != null && license['isActive'] == true) {
+      final daysRemaining = license['daysRemaining'];
+      if (daysRemaining <= 2 && daysRemaining >= 0) {
+        if (mounted) {
+          Future.delayed(const Duration(seconds: 1), () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ لایسنس شما ${toPersianDigits(daysRemaining.toString())} روز دیگر منقضی می‌شود. برای تمدید با توسعه‌دهنده تماس بگیرید.'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+          });
+        }
+      }
+    }
+  }
+
+  Color _getLicenseColor() {
+    if (_license == null || _license!['isActive'] != true) return Colors.red;
+    final days = _license!['daysRemaining'];
+    if (days <= 2) return Colors.orange;
+    return Colors.green;
+  }
+
+  String _getLicenseStatus() {
+    if (_license == null || _license!['isActive'] != true) return 'غیرفعال';
+    final days = _license!['daysRemaining'];
+    final expiry = _license!['expiry'] as DateTime;
+    return '${toPersianDigits(days.toString())} روز باقی‌مانده | انقضا: ${toPersianDigits(expiry.year.toString())}/${toPersianDigits(expiry.month.toString().padLeft(2, '0'))}/${toPersianDigits(expiry.day.toString().padLeft(2, '0'))}';
   }
 
   @override
@@ -40,94 +92,121 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: const Text('پنل مدیریت'),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: AppTheme.gold),
-            onPressed: () => Navigator.pop(context),
-          ),
+          IconButton(icon: const Icon(Icons.logout, color: AppTheme.gold), onPressed: () => Navigator.pop(context)),
         ],
       ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Column(
-          children: [
-            // کارت شناسه دستگاه
-            Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.cardBlack,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.gold, width: 1),
-              ),
-              child: Row(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.gold))
+          : Directionality(
+              textDirection: TextDirection.rtl,
+              child: Column(
                 children: [
-                  const Icon(Icons.fingerprint, color: AppTheme.gold, size: 24),
-                  const SizedBox(width: 8),
-                  Expanded(
+                  // کارت وضعیت لایسنس
+                  Container(
+                    margin: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBlack,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _getLicenseColor(), width: 2),
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('شناسه دستگاه شما:', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                        const SizedBox(height: 2),
-                        Text(
-                          _deviceId,
-                          style: const TextStyle(color: AppTheme.textYellow, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Icon(Icons.security, color: _getLicenseColor(), size: 24),
+                            const SizedBox(width: 8),
+                            Text('وضعیت لایسنس: $_planName', style: TextStyle(color: _getLicenseColor(), fontWeight: FontWeight.bold, fontSize: 16)),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _getLicenseColor().withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(_license != null && _license!['isActive'] == true ? 'فعال' : 'غیرفعال', style: TextStyle(color: _getLicenseColor(), fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(_getLicenseStatus(), style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                        if (_license == null || _license!['isActive'] != true) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const LicenseInputScreen()));
+                                if (result == true) _loadData();
+                              },
+                              icon: const Icon(Icons.key, size: 18),
+                              label: const Text('فعال‌سازی لایسنس', style: TextStyle(fontSize: 14)),
+                              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 8)),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  // کارت شناسه دستگاه
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBlack,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.gold, width: 1),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.fingerprint, color: AppTheme.gold, size: 24),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('شناسه دستگاه شما:', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
+                              const SizedBox(height: 2),
+                              Text(_deviceId, style: const TextStyle(color: AppTheme.textYellow, fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace'), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, color: AppTheme.gold, size: 20),
+                          tooltip: 'کپی شناسه',
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: _deviceId));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ شناسه دستگاه کپی شد'), backgroundColor: AppTheme.gold));
+                          },
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.copy, color: AppTheme.gold, size: 20),
-                    tooltip: 'کپی شناسه',
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: _deviceId));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('✓ شناسه دستگاه کپی شد. برای توسعه‌دهنده ارسال کنید.'), backgroundColor: AppTheme.gold, duration: Duration(seconds: 3)),
-                      );
-                    },
+                  const SizedBox(height: 8),
+
+                  Expanded(
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      padding: const EdgeInsets.all(16),
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      children: [
+                        _buildCard(context, Icons.people, 'مشاوران', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgentsManagementScreen()))),
+                        _buildCard(context, Icons.home, 'املاک', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPropertiesScreen()))),
+                        _buildCard(context, Icons.description, 'قراردادها', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDealRegistrationScreen()))),
+                        _buildCard(context, Icons.receipt_long, 'هزینه‌ها', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen()))),
+                        _buildCard(context, Icons.bar_chart, 'گزارشات', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()))),
+                        _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
+                        _buildCard(context, Icons.backup, 'پشتیبان', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BackupScreen()))),
+                        _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()))),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                padding: const EdgeInsets.all(16),
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _buildCard(context, Icons.people, 'مشاوران', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AgentsManagementScreen()));
-                  }),
-                  _buildCard(context, Icons.home, 'املاک', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPropertiesScreen()));
-                  }),
-                  _buildCard(context, Icons.description, 'قراردادها', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDealRegistrationScreen()));
-                  }),
-                  _buildCard(context, Icons.receipt_long, 'هزینه‌ها', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen()));
-                  }),
-                  _buildCard(context, Icons.bar_chart, 'گزارشات', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
-                  }),
-                  _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-                  }),
-                  _buildCard(context, Icons.backup, 'پشتیبان', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const BackupScreen()));
-                  }),
-                  _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()));
-                  }),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
