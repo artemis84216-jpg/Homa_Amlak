@@ -128,13 +128,12 @@ class _AdminGenerateAgentQrScreenState extends State<AdminGenerateAgentQrScreen>
                   ),
                   child: Column(
                     children: [
+                      // اصلاح: حذف استایل‌های اضافی که باعث خطای کامپایل می‌شدند
                       QrImageView(
                         data: _qrContent!,
                         version: QrVersions.auto,
                         size: 250,
                         backgroundColor: Colors.white,
-                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.roundedOuter, color: Colors.black),
-                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.roundedOuter, color: Colors.black),
                       ),
                       const SizedBox(height: 12),
                       Text('کد دعوت: ${_generatedCode!}', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace')),
