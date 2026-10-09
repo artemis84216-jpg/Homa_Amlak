@@ -52,7 +52,7 @@ class DatabaseHelper {
       CREATE TABLE agents (
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, national_id TEXT, 
         password TEXT, profile_image TEXT,
-        commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT "active", join_date TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT 'active', join_date TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
     await db.execute('''
@@ -96,6 +96,12 @@ class DatabaseHelper {
     }
   }
 
+  // --- متدهای املاک ---
+  Future<int> insertProperty(Map<String, dynamic> property) async {
+    final db = await instance.database;
+    return await db.insert('properties', property);
+  }
+
   Future<List<Map<String, dynamic>>> getAllProperties() async {
     final db = await instance.database;
     return await db.query('properties', orderBy: 'id DESC');
@@ -112,9 +118,25 @@ class DatabaseHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
+  Future<int> updateProperty(int id, Map<String, dynamic> property) async {
+    final db = await instance.database;
+    return await db.update('properties', property, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteProperty(int id) async {
+    final db = await instance.database;
+    return await db.delete('properties', where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<int> updatePropertyStatus(int id, String status) async {
     final db = await instance.database;
     return await db.update('properties', {'status': status}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- متدهای مشاوران ---
+  Future<int> insertAgent(Map<String, dynamic> agent) async {
+    final db = await instance.database;
+    return await db.insert('agents', agent);
   }
 
   Future<List<Map<String, dynamic>>> getAllAgents() async {
@@ -128,7 +150,54 @@ class DatabaseHelper {
     return result.isNotEmpty ? result.first : null;
   }
 
-  // --- متد جدید ثبت معامله ---
+  Future<int> updateAgent(int id, Map<String, dynamic> agent) async {
+    final db = await instance.database;
+    return await db.update('agents', agent, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteAgent(int id) async {
+    final db = await instance.database;
+    return await db.delete('agents', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- متدهای بازدیدها ---
+  Future<int> insertViewing(Map<String, dynamic> viewing) async {
+    final db = await instance.database;
+    return await db.insert('viewings', viewing);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllViewings() async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT v.*, p.title as property_title 
+      FROM viewings v 
+      LEFT JOIN properties p ON v.property_id = p.id 
+      ORDER BY v.id DESC
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getViewingsByAgent(String agentName) async {
+    final db = await instance.database;
+    return await db.rawQuery('''
+      SELECT v.*, p.title as property_title, p.agent_name 
+      FROM viewings v 
+      JOIN properties p ON v.property_id = p.id 
+      WHERE p.agent_name = ? 
+      ORDER BY v.id DESC
+    ''', [agentName]);
+  }
+
+  Future<int> updateViewingStatus(int id, String status) async {
+    final db = await instance.database;
+    return await db.update('viewings', {'status': status}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteViewing(int id) async {
+    final db = await instance.database;
+    return await db.delete('viewings', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- متدهای معاملات و قراردادها ---
   Future<void> registerDeal({
     required int propertyId,
     required String propertyTitle,
@@ -140,7 +209,6 @@ class DatabaseHelper {
   }) async {
     final db = await instance.database;
     await db.transaction((txn) async {
-      // ۱. ثبت در جدول قراردادها
       await txn.insert('contracts', {
         'property_id': propertyId,
         'property_title': propertyTitle,
@@ -152,7 +220,6 @@ class DatabaseHelper {
         'status': 'active',
       });
       
-      // ۲. تغییر وضعیت ملک به فروخته شده یا اجاره رفته
       final newStatus = dealType == 'sale' ? 'sold' : 'rented';
       await txn.update('properties', {'status': newStatus}, where: 'id = ?', whereArgs: [propertyId]);
     });
