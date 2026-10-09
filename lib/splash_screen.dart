@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'login_screen.dart';
+import 'developer_panel_screen.dart';
 import 'app_utils.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -17,13 +18,9 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // انتقال خودکار به صفحه لاگین بعد از ۳ ثانیه
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       }
     });
   }
@@ -34,17 +31,10 @@ class _SplashScreenState extends State<SplashScreen> {
     _tapTimer = Timer(const Duration(milliseconds: 1500), () {
       setState(() => _logoTapCount = 0);
     });
-    // اگر ۵ بار کلیک شد، به پنل توسعه‌دهنده برو (فاز ۲ اضافه می‌شود)
     if (_logoTapCount >= 5) {
       _tapTimer?.cancel();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('پنل توسعه‌دهنده در فاز بعدی فعال می‌شود'),
-          backgroundColor: AppTheme.gold,
-          duration: Duration(seconds: 2),
-        ),
-      );
       setState(() => _logoTapCount = 0);
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const DeveloperPanelScreen()));
     }
   }
 
@@ -70,52 +60,18 @@ class _SplashScreenState extends State<SplashScreen> {
                   color: AppTheme.cardBlack,
                   shape: BoxShape.circle,
                   border: Border.all(color: AppTheme.gold, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.gold.withOpacity(0.3),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: AppTheme.gold.withOpacity(0.3), blurRadius: 30, spreadRadius: 5)],
                 ),
-                child: const Icon(
-                  Icons.home_work,
-                  size: 100,
-                  color: AppTheme.gold,
-                ),
+                child: const Icon(Icons.home_work, size: 100, color: AppTheme.gold),
               ),
               const SizedBox(height: 30),
-              const Text(
-                'Homa_Amlak',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.gold,
-                  letterSpacing: 2,
-                ),
-              ),
+              const Text('Homa_Amlak', style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: AppTheme.gold, letterSpacing: 2)),
               const SizedBox(height: 8),
-              const Text(
-                'همـا املاک',
-                style: TextStyle(
-                  fontSize: 18,
-                  color: AppTheme.textYellow,
-                ),
-              ),
+              const Text('همـا املاک', style: TextStyle(fontSize: 18, color: AppTheme.textYellow)),
               const SizedBox(height: 60),
-              const SizedBox(
-                width: 30,
-                height: 30,
-                child: CircularProgressIndicator(
-                  color: AppTheme.gold,
-                  strokeWidth: 2,
-                ),
-              ),
+              const SizedBox(width: 30, height: 30, child: CircularProgressIndicator(color: AppTheme.gold, strokeWidth: 2)),
               const SizedBox(height: 20),
-              Text(
-                'نسخه ۱.۰.۰',
-                style: TextStyle(color: AppTheme.textGrey, fontSize: 12),
-              ),
+              Text('نسخه ۱.۰.۰', style: TextStyle(color: AppTheme.textGrey, fontSize: 12)),
             ],
           ),
         ),
