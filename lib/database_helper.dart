@@ -61,6 +61,19 @@ class DatabaseHelper {
         is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+    await db.execute('''
+      CREATE TABLE invitations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        code TEXT NOT NULL UNIQUE,
+        inviter_name TEXT NOT NULL,
+        inviter_role TEXT NOT NULL,
+        target_role TEXT NOT NULL,
+        apk_download_url TEXT,
+        is_used INTEGER DEFAULT 0,
+        used_by_device_id TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
