@@ -70,18 +70,71 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+  bool get _isLicenseActive => _license != null && _license!['isActive'] == true;
+
   Color _getLicenseColor() {
-    if (_license == null || _license!['isActive'] != true) return Colors.red;
+    if (!_isLicenseActive) return Colors.red;
     final days = _license!['daysRemaining'];
     if (days <= 2) return Colors.orange;
     return Colors.green;
   }
 
   String _getLicenseStatus() {
-    if (_license == null || _license!['isActive'] != true) return 'غیرفعال';
+    if (!_isLicenseActive) return 'غیرفعال - برای استفاده از اپ لایسنس تهیه کنید';
     final days = _license!['daysRemaining'];
-    final expiry = _license!['expiry'] as DateTime;
-    return '${toPersianDigits(days.toString())} روز باقی‌مانده | انقضا: ${toPersianDigits(expiry.year.toString())}/${toPersianDigits(expiry.month.toString().padLeft(2, '0'))}/${toPersianDigits(expiry.day.toString().padLeft(2, '0'))}';
+    final expiryJalali = _license!['expiryJalali'];
+    return '${toPersianDigits(days.toString())} روز باقی‌مانده | انقضا: ${toPersianDigits(expiryJalali.year.toString())}/${toPersianDigits(expiryJalali.month.toString().padLeft(2, '0'))}/${toPersianDigits(expiryJalali.day.toString().padLeft(2, '0'))}';
+  }
+
+  void _showLicenseRequired(String feature) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: AppTheme.cardBlack,
+          title: const Row(
+            children: [
+              Icon(Icons.lock, color: Colors.red, size: 28),
+              SizedBox(width: 8),
+              Text('دسترسی محدود', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('برای استفاده از بخش "$feature" باید لایسنس فعال داشته باشید.', style: const TextStyle(color: AppTheme.textWhite)),
+              const SizedBox(height: 12),
+              const Text('لطفاً شناسه دستگاه خود را برای توسعه‌دهنده ارسال کنید تا کد لایسنس دریافت نمایید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const LicenseInputScreen()));
+                if (result == true) _loadData();
+              },
+              icon: const Icon(Icons.key, size: 18),
+              label: const Text('فعال‌سازی لایسنس'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateTo(Widget screen, String feature) {
+    if (!_isLicenseActive) {
+      _showLicenseRequired(feature);
+      return;
+    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
@@ -117,21 +170,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                           children: [
                             Icon(Icons.security, color: _getLicenseColor(), size: 24),
                             const SizedBox(width: 8),
-                            Text('وضعیت لایسنس: $_planName', style: TextStyle(color: _getLicenseColor(), fontWeight: FontWeight.bold, fontSize: 16)),
-                            const Spacer(),
+                            Expanded(
+                              child: Text('لایسنس: $_planName', style: TextStyle(color: _getLicenseColor(), fontWeight: FontWeight.bold, fontSize: 16)),
+                            ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: _getLicenseColor().withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: Text(_license != null && _license!['isActive'] == true ? 'فعال' : 'غیرفعال', style: TextStyle(color: _getLicenseColor(), fontSize: 12, fontWeight: FontWeight.bold)),
+                              child: Text(_isLicenseActive ? 'فعال' : 'غیرفعال', style: TextStyle(color: _getLicenseColor(), fontSize: 12, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(_getLicenseStatus(), style: const TextStyle(color: AppTheme.textGrey, fontSize: 12)),
-                        if (_license == null || _license!['isActive'] != true) ...[
+                        if (!_isLicenseActive) ...[
                           const SizedBox(height: 8),
                           SizedBox(
                             width: double.infinity,
@@ -193,14 +247,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       crossAxisSpacing: 16,
                       mainAxisSpacing: 16,
                       children: [
-                        _buildCard(context, Icons.people, 'مشاوران', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AgentsManagementScreen()))),
-                        _buildCard(context, Icons.home, 'املاک', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPropertiesScreen()))),
-                        _buildCard(context, Icons.description, 'قراردادها', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminDealRegistrationScreen()))),
-                        _buildCard(context, Icons.receipt_long, 'هزینه‌ها', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen()))),
-                        _buildCard(context, Icons.bar_chart, 'گزارشات', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()))),
-                        _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-                        _buildCard(context, Icons.backup, 'پشتیبان', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BackupScreen()))),
-                        _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()))),
+                        _buildCard(context, Icons.people, 'مشاوران', AppTheme.gold, () => _navigateTo(const AgentsManagementScreen(), 'مشاوران')),
+                        _buildCard(context, Icons.home, 'املاک', AppTheme.gold, () => _navigateTo(const AdminPropertiesScreen(), 'املاک')),
+                        _buildCard(context, Icons.description, 'قراردادها', AppTheme.gold, () => _navigateTo(const AdminDealRegistrationScreen(), 'قراردادها')),
+                        _buildCard(context, Icons.receipt_long, 'هزینه‌ها', AppTheme.gold, () => _navigateTo(const ExpensesScreen(), 'هزینه‌ها')),
+                        _buildCard(context, Icons.bar_chart, 'گزارشات', AppTheme.gold, () => _navigateTo(const ReportsScreen(), 'گزارشات')),
+                        _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () => _navigateTo(const SettingsScreen(), 'تنظیمات')),
+                        _buildCard(context, Icons.backup, 'پشتیبان', AppTheme.gold, () => _navigateTo(const BackupScreen(), 'پشتیبان')),
+                        _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () => _navigateTo(const AboutScreen(), 'درباره ما')),
                       ],
                     ),
                   ),
@@ -218,9 +272,13 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 40, color: color),
+            Icon(icon, size: 40, color: _isLicenseActive ? color : Colors.grey),
             const SizedBox(height: 8),
-            Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textWhite)),
+            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _isLicenseActive ? AppTheme.textWhite : Colors.grey)),
+            if (!_isLicenseActive) ...[
+              const SizedBox(height: 4),
+              const Icon(Icons.lock, size: 14, color: Colors.red),
+            ],
           ],
         ),
       ),
