@@ -4,6 +4,7 @@ import 'properties_list_screen.dart';
 import 'add_property_screen.dart';
 import 'viewings_list_screen.dart';
 import 'app_utils.dart';
+import 'agent_generate_customer_qr_screen.dart';
 
 class AgentDashboard extends StatelessWidget {
   final Map<String, dynamic> agentData;
@@ -53,6 +54,9 @@ class AgentDashboard extends StatelessWidget {
             }),
             _buildCard(context, Icons.people, 'مشتریان', AppTheme.gold, () { _showComingSoon(context, 'مشتریان'); }),
             _buildCard(context, Icons.attach_money, 'کمیسیون من', AppTheme.gold, () { _showComingSoon(context, 'کمیسیون'); }),
+            _buildCard(context, Icons.qr_code_2, 'دعوت مشتری', AppTheme.gold, () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => AgentGenerateCustomerQrScreen(agentData: agentData)));
+            }),
           ],
         ),
       ),
