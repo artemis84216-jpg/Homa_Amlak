@@ -21,6 +21,7 @@ class _AdminDealRegistrationScreenState extends State<AdminDealRegistrationScree
   Map<String, dynamic>? _selectedProperty;
   String _dealType = 'sale';
   bool _isLoading = false;
+  bool _isLoadingProps = true;
 
   @override
   void initState() {
@@ -29,22 +30,25 @@ class _AdminDealRegistrationScreenState extends State<AdminDealRegistrationScree
   }
 
   Future<void> _loadProperties() async {
-    setState(() => _isLoading = true);
+    setState(() => _isLoadingProps = true);
     final data = await DatabaseHelper.instance.getAvailableProperties();
     setState(() {
       _properties = data;
-      _isLoading = false;
+      _isLoadingProps = false;
     });
   }
 
   Future<void> _openKhodnevis() async {
     final Uri url = Uri.parse('https://khodnevis.mrud.ir/');
-    if (await canLaunchUrl(url)) {
+    try {
+      // حذف canLaunchUrl و استفاده مستقیم برای دور زدن محدودیت‌های اندروید
       await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('امکان باز کردن سامانه خودنویس وجود ندارد'), backgroundColor: Colors.red),
-      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطا در باز کردن مرورگر: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -74,7 +78,7 @@ class _AdminDealRegistrationScreenState extends State<AdminDealRegistrationScree
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✓ معامله با موفقیت ثبت و وضعیت ملک تغییر کرد'), backgroundColor: AppTheme.gold),
+          const SnackBar(content: Text('✓ معامله ثبت و وضعیت ملک تغییر کرد'), backgroundColor: AppTheme.gold),
         );
         Navigator.pop(context, true);
       }
@@ -90,195 +94,201 @@ class _AdminDealRegistrationScreenState extends State<AdminDealRegistrationScree
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      appBar: AppBar(
-        title: const Text('ثبت معامله جدید'),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.gold))
-          : Directionality(
-              textDirection: TextDirection.rtl,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
+      appBar: AppBar(title: const Text('ثبت معامله جدید'), centerTitle: true),
+      body: Directionality(
+        textDirection: TextDirection.rtl,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // دکمه سامانه خودنویس
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue, width: 1),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // دکمه سامانه خودنویس
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.blue, width: 1),
-                        ),
-                        child: Column(
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.gavel, color: Colors.blue, size: 28),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'سامانه خودنویس وزارت راه',
-                                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'برای تنظیم قرارداد رسمی و دریافت کد رهگیری، ابتدا روی دکمه زیر کلیک کنید تا سامانه باز شود، سپس مشخصات را در اینجا ثبت نمایید.',
-                              style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: _openKhodnevis,
-                                icon: const Icon(Icons.open_in_new, size: 20),
-                                label: const Text('باز کردن سامانه خودنویس', style: TextStyle(fontSize: 16)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      const Text('۱. انتخاب ملک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<Map<String, dynamic>>(
-                        value: _selectedProperty,
-                        dropdownColor: AppTheme.cardBlack,
-                        decoration: const InputDecoration(
-                          labelText: 'انتخاب ملک موجود',
-                          prefixIcon: Icon(Icons.home, color: AppTheme.gold),
-                          border: OutlineInputBorder(),
-                        ),
-                        items: _properties.map((p) {
-                          return DropdownMenuItem<Map<String, dynamic>>(
-                            value: p,
-                            child: Text(p['title'] ?? '', style: const TextStyle(color: AppTheme.textWhite)),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          setState(() => _selectedProperty = val);
-                          // اگر نوع معامله ملک اجاره است، پیش‌فرض را اجاره بگذار
-                          if (val != null && val['listing_type'] == 'rent') {
-                            setState(() => _dealType = 'rent');
-                          } else if (val != null) {
-                            setState(() => _dealType = 'sale');
-                          }
-                        },
-                        validator: (v) => v == null ? 'انتخاب ملک الزامی است' : null,
-                      ),
-                      
-                      if (_selectedProperty != null) ...[
-                        const SizedBox(height: 12),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(color: AppTheme.cardBlack, borderRadius: BorderRadius.circular(8)),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.badge, color: AppTheme.gold, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'مشاور: ${_selectedProperty!['agent_name'] ?? "نامشخص"}',
-                                  style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-
-                      const SizedBox(height: 24),
-                      const Text('۲. مشخصات طرف معامله (مشتری)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _customerNameController,
-                        textDirection: TextDirection.rtl,
-                        style: const TextStyle(color: AppTheme.textWhite),
-                        decoration: const InputDecoration(labelText: 'نام و نام خانوادگی مشتری', prefixIcon: Icon(Icons.person, color: AppTheme.gold)),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'نام مشتری الزامی است' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _customerPhoneController,
-                        textDirection: TextDirection.rtl,
-                        keyboardType: TextInputType.phone,
-                        style: const TextStyle(color: AppTheme.textWhite),
-                        decoration: const InputDecoration(labelText: 'شماره تماس مشتری', prefixIcon: Icon(Icons.phone, color: AppTheme.gold)),
-                        validator: (v) => v == null || v.trim().isEmpty ? 'شماره تماس الزامی است' : null,
-                      ),
-
-                      const SizedBox(height: 24),
-                      const Text('۳. جزئیات معامله', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
-                      const SizedBox(height: 8),
-                      Row(
+                      const Row(
                         children: [
+                          Icon(Icons.gavel, color: Colors.blue, size: 28),
+                          SizedBox(width: 12),
                           Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => setState(() => _dealType = 'sale'),
-                              icon: const Icon(Icons.sell, size: 18),
-                              label: const Text('فروش', style: TextStyle(fontSize: 14)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _dealType == 'sale' ? AppTheme.gold : AppTheme.cardBlack,
-                                foregroundColor: _dealType == 'sale' ? Colors.black : AppTheme.textWhite,
-                                side: const BorderSide(color: AppTheme.gold),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: () => setState(() => _dealType = 'rent'),
-                              icon: const Icon(Icons.key, size: 18),
-                              label: const Text('اجاره', style: TextStyle(fontSize: 14)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _dealType == 'rent' ? AppTheme.gold : AppTheme.cardBlack,
-                                foregroundColor: _dealType == 'rent' ? Colors.black : AppTheme.textWhite,
-                                side: const BorderSide(color: AppTheme.gold),
-                              ),
-                            ),
+                            child: Text('سامانه خودنویس وزارت راه', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 16)),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _amountController,
-                        textDirection: TextDirection.rtl,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: AppTheme.textWhite),
-                        inputFormatters: [CommaSeparatorFormatter()],
-                        decoration: InputDecoration(
-                          labelText: _dealType == 'sale' ? 'مبلغ نهایی فروش (تومان)' : 'مبلغ کل رهن و اجاره (تومان)',
-                          prefixIcon: const Icon(Icons.attach_money, color: AppTheme.gold),
-                        ),
-                        validator: (v) => v == null || v.isEmpty ? 'مبلغ الزامی است' : null,
-                      ),
-
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 8),
+                      const Text('برای دریافت کد رهگیری، ابتدا سامانه را باز کنید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                      const SizedBox(height: 12),
                       SizedBox(
-                        height: 55,
+                        width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: _isLoading ? null : _saveDeal,
-                          icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.check_circle, size: 24),
-                          label: Text(_isLoading ? 'در حال ثبت...' : 'ثبت نهایی معامله و تغییر وضعیت ملک', style: const TextStyle(fontSize: 16)),
+                          onPressed: _openKhodnevis,
+                          icon: const Icon(Icons.open_in_new, size: 20),
+                          label: const Text('باز کردن سامانه خودنویس', style: TextStyle(fontSize: 16)),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
+                const SizedBox(height: 24),
+
+                const Text('۱. انتخاب ملک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                
+                if (_isLoadingProps)
+                  const Center(child: CircularProgressIndicator(color: AppTheme.gold))
+                else if (_properties.isEmpty)
+                  const Center(child: Text('هیچ ملک موجودی برای ثبت معامله وجود ندارد', style: TextStyle(color: AppTheme.textGrey)))
+                else
+                  DropdownButtonFormField<Map<String, dynamic>>(
+                    value: _selectedProperty,
+                    dropdownColor: AppTheme.cardBlack,
+                    decoration: const InputDecoration(
+                      labelText: 'انتخاب ملک موجود',
+                      prefixIcon: Icon(Icons.home, color: AppTheme.gold),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _properties.map((p) {
+                      return DropdownMenuItem<Map<String, dynamic>>(
+                        value: p,
+                        child: Text(p['title'] ?? '', style: const TextStyle(color: AppTheme.textWhite)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedProperty = val;
+                        if (val != null && val['listing_type'] == 'rent') {
+                          _dealType = 'rent';
+                        } else if (val != null) {
+                          _dealType = 'sale';
+                        }
+                      });
+                    },
+                    validator: (v) => v == null ? 'انتخاب ملک الزامی است' : null,
+                  ),
+                
+                // نمایش کارت اطلاعات ملک انتخاب شده
+                if (_selectedProperty != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBlack, 
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.gold, width: 1)
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_selectedProperty!['title'] ?? '', style: const TextStyle(color: AppTheme.gold, fontSize: 16, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          const Icon(Icons.location_on, size: 16, color: AppTheme.textGrey),
+                          const SizedBox(width: 4),
+                          Expanded(child: Text(_selectedProperty!['address'] ?? '', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12))),
+                        ]),
+                        const SizedBox(height: 8),
+                        Row(children: [
+                          const Icon(Icons.attach_money, size: 16, color: AppTheme.textGrey),
+                          const SizedBox(width: 4),
+                          Text('${formatPrice(_selectedProperty!['price'])} تومان', style: const TextStyle(color: AppTheme.textYellow, fontSize: 14, fontWeight: FontWeight.bold)),
+                        ]),
+                        const Divider(color: AppTheme.gold, height: 20),
+                        Row(children: [
+                          const Icon(Icons.badge, color: AppTheme.gold, size: 18),
+                          const SizedBox(width: 8),
+                          Text('مشاور ثبت‌کننده: ${_selectedProperty!['agent_name'] ?? "نامشخص"}', style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold)),
+                        ]),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+                const Text('۲. مشخصات طرف معامله (مشتری)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _customerNameController,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  decoration: const InputDecoration(labelText: 'نام و نام خانوادگی مشتری', prefixIcon: Icon(Icons.person, color: AppTheme.gold)),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'نام مشتری الزامی است' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _customerPhoneController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  decoration: const InputDecoration(labelText: 'شماره تماس مشتری', prefixIcon: Icon(Icons.phone, color: AppTheme.gold)),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'شماره تماس الزامی است' : null,
+                ),
+
+                const SizedBox(height: 24),
+                const Text('۳. جزئیات معامله', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => setState(() => _dealType = 'sale'),
+                        icon: const Icon(Icons.sell, size: 18),
+                        label: const Text('فروش', style: TextStyle(fontSize: 14)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dealType == 'sale' ? AppTheme.gold : AppTheme.cardBlack,
+                          foregroundColor: _dealType == 'sale' ? Colors.black : AppTheme.textWhite,
+                          side: const BorderSide(color: AppTheme.gold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => setState(() => _dealType = 'rent'),
+                        icon: const Icon(Icons.key, size: 18),
+                        label: const Text('اجاره', style: TextStyle(fontSize: 14)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _dealType == 'rent' ? AppTheme.gold : AppTheme.cardBlack,
+                          foregroundColor: _dealType == 'rent' ? Colors.black : AppTheme.textWhite,
+                          side: const BorderSide(color: AppTheme.gold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _amountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  inputFormatters: [CommaSeparatorFormatter()],
+                  decoration: InputDecoration(
+                    labelText: _dealType == 'sale' ? 'مبلغ نهایی فروش (تومان)' : 'مبلغ کل رهن و اجاره (تومان)',
+                    prefixIcon: const Icon(Icons.attach_money, color: AppTheme.gold),
+                  ),
+                  validator: (v) => v == null || v.isEmpty ? 'مبلغ الزامی است' : null,
+                ),
+
+                const SizedBox(height: 32),
+                SizedBox(
+                  height: 55,
+                  child: ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _saveDeal,
+                    icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.check_circle, size: 24),
+                    label: Text(_isLoading ? 'در حال ثبت...' : 'ثبت نهایی معامله و تغییر وضعیت ملک', style: const TextStyle(fontSize: 16)),
+                  ),
+                ),
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 }
