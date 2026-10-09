@@ -31,118 +31,30 @@ class _PlansManagementScreenState extends State<PlansManagementScreen> {
   Future<void> _showPlanDialog({Map<String, dynamic>? plan}) async {
     final isEdit = plan != null;
     final nameController = TextEditingController(text: plan?['name']?.toString() ?? '');
-    final durationValueController = TextEditingController(text: plan?['duration_months']?.toString() ?? '');
+    final durationValueController = TextEditingController(text: plan?['duration_value']?.toString() ?? '');
     final priceController = TextEditingController(text: plan?['price']?.toString() ?? '');
     final maxAgentsController = TextEditingController(text: plan?['max_agents']?.toString() ?? '');
     final maxPropertiesController = TextEditingController(text: plan?['max_properties']?.toString() ?? '');
-    
-    String durationType = 'months'; // months یا days
-    bool unlimitedAgents = (plan?['max_agents'] ?? 0) == 0;
-    bool unlimitedProperties = (plan?['max_properties'] ?? 0) == 0;
 
     await showDialog(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: StatefulBuilder(
-          builder: (ctx, setStateDialog) => AlertDialog(
-            backgroundColor: AppTheme.cardBlack,
-            title: Text(isEdit ? 'ویرایش پلن' : 'افزودن پلن جدید', style: const TextStyle(color: AppTheme.gold)),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: nameController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام پلن (مثلاً: طلایی، نقره‌ای)', prefixIcon: Icon(Icons.label, color: AppTheme.gold))),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(controller: durationValueController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'مدت زمان', prefixIcon: Icon(Icons.calendar_today, color: AppTheme.gold))),
-                      ),
-                      const SizedBox(width: 8),
-                      DropdownButton<String>(
-                        value: durationType,
-                        dropdownColor: AppTheme.cardBlack,
-                        style: const TextStyle(color: AppTheme.textWhite),
-                        items: const [
-                          DropdownMenuItem(value: 'days', child: Text('روز')),
-                          DropdownMenuItem(value: 'months', child: Text('ماه')),
-                        ],
-                        onChanged: (v) => setStateDialog(() => durationType = v!),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(controller: priceController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'قیمت (تومان) - 0 برای رایگان', prefixIcon: Icon(Icons.attach_money, color: AppTheme.gold))),
-                  const SizedBox(height: 12),
-                  CheckboxListTile(
-                    title: const Text('مشاوران نامحدود', style: TextStyle(color: AppTheme.textWhite)),
-                    value: unlimitedAgents,
-                    activeColor: AppTheme.gold,
-                    onChanged: (v) {
-                      setStateDialog(() {
-                        unlimitedAgents = v ?? false;
-                        if (unlimitedAgents) maxAgentsController.text = '0';
-                      });
-                    },
-                  ),
-                  if (!unlimitedAgents)
-                    TextField(controller: maxAgentsController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'سقف تعداد مشاوران', prefixIcon: Icon(Icons.people, color: AppTheme.gold))),
-                  const SizedBox(height: 12),
-                  CheckboxListTile(
-                    title: const Text('فایل ملک نامحدود', style: TextStyle(color: AppTheme.textWhite)),
-                    value: unlimitedProperties,
-                    activeColor: AppTheme.gold,
-                    onChanged: (v) {
-                      setStateDialog(() {
-                        unlimitedProperties = v ?? false;
-                        if (unlimitedProperties) maxPropertiesController.text = '0';
-                      });
-                    },
-                  ),
-                  if (!unlimitedProperties)
-                    TextField(controller: maxPropertiesController, keyboardType: TextInputType.number, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'سقف تعداد فایل ملک', prefixIcon: Icon(Icons.home, color: AppTheme.gold))),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف', style: TextStyle(color: AppTheme.textGrey))),
-              ElevatedButton(
-                onPressed: () async {
-                  if (nameController.text.isEmpty || durationValueController.text.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام و مدت زمان الزامی است')));
-                    return;
-                  }
-                  
-                  int durationMonths = int.tryParse(toEnglishDigits(durationValueController.text)) ?? 0;
-                  if (durationType == 'days') {
-                    // تبدیل روز به کسر ماه (برای نمایش)
-                    durationMonths = durationMonths; // همان عدد روز را ذخیره می‌کنیم اما نوع را در نام ذخیره می‌کنیم
-                  }
-                  
-                  final planData = {
-                    'name': '${nameController.text.trim()}${durationType == 'days' ? ' (روز)' : ''}',
-                    'duration_months': durationMonths,
-                    'duration_type': durationType,
-                    'price': double.tryParse(toEnglishDigits(priceController.text)) ?? 0,
-                    'max_agents': unlimitedAgents ? 0 : (int.tryParse(toEnglishDigits(maxAgentsController.text)) ?? 0),
-                    'max_properties': unlimitedProperties ? 0 : (int.tryParse(toEnglishDigits(maxPropertiesController.text)) ?? 0),
-                    'is_active': 1,
-                  };
-                  
-                  if (isEdit) {
-                    await DatabaseHelper.instance.updatePlan(plan!['id'], planData);
-                  } else {
-                    await DatabaseHelper.instance.insertPlan(planData);
-                  }
-                  Navigator.pop(ctx);
-                  _loadPlans();
-                },
-                child: Text(isEdit ? 'ذخیره' : 'افزودن'),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => _PlanFormDialog(
+        isEdit: isEdit,
+        nameController: nameController,
+        durationValueController: durationValueController,
+        priceController: priceController,
+        maxAgentsController: maxAgentsController,
+        maxPropertiesController: maxPropertiesController,
+        initialDurationType: plan?['duration_type']?.toString() ?? 'months',
+        onSave: (planData) async {
+          if (isEdit) {
+            await DatabaseHelper.instance.updatePlan(plan!['id'], planData);
+          } else {
+            await DatabaseHelper.instance.insertPlan(planData);
+          }
+          Navigator.pop(ctx);
+          _loadPlans();
+        },
       ),
     );
   }
@@ -170,10 +82,10 @@ class _PlansManagementScreenState extends State<PlansManagementScreen> {
   }
 
   String _getDurationText(Map<String, dynamic> plan) {
-    final duration = plan['duration_months'];
-    final type = plan['duration_type'] ?? plan['name'].toString().contains('(روز)') ? 'days' : 'months';
+    final duration = plan['duration_value'] ?? 0;
+    final type = plan['duration_type'] ?? 'months';
     final durationStr = toPersianDigits(duration.toString());
-    
+
     if (type == 'days') {
       return '$durationStr روزه';
     } else {
@@ -212,7 +124,7 @@ class _PlansManagementScreenState extends State<PlansManagementScreen> {
                     final plan = _plans[index];
                     final isUnlimitedAgents = (plan['max_agents'] ?? 0) == 0;
                     final isUnlimitedProperties = (plan['max_properties'] ?? 0) == 0;
-                    
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: Directionality(
@@ -237,7 +149,7 @@ class _PlansManagementScreenState extends State<PlansManagementScreen> {
                                     ),
                                   ),
                                   const Spacer(),
-                                  Text(plan['name']?.toString().replaceAll(' (روز)', '') ?? '', style: const TextStyle(color: AppTheme.textWhite, fontSize: 16, fontWeight: FontWeight.bold)),
+                                  Text(plan['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite, fontSize: 16, fontWeight: FontWeight.bold)),
                                 ],
                               ),
                               const SizedBox(height: 12),
@@ -290,6 +202,167 @@ class _PlansManagementScreenState extends State<PlansManagementScreen> {
         foregroundColor: Colors.black,
         icon: const Icon(Icons.add),
         label: const Text('افزودن پلن'),
+      ),
+    );
+  }
+}
+
+// ویجت جداگانه برای دیالوگ فرم پلن
+class _PlanFormDialog extends StatefulWidget {
+  final bool isEdit;
+  final TextEditingController nameController;
+  final TextEditingController durationValueController;
+  final TextEditingController priceController;
+  final TextEditingController maxAgentsController;
+  final TextEditingController maxPropertiesController;
+  final String initialDurationType;
+  final Function(Map<String, dynamic>) onSave;
+
+  const _PlanFormDialog({
+    required this.isEdit,
+    required this.nameController,
+    required this.durationValueController,
+    required this.priceController,
+    required this.maxAgentsController,
+    required this.maxPropertiesController,
+    required this.initialDurationType,
+    required this.onSave,
+  });
+
+  @override
+  State<_PlanFormDialog> createState() => _PlanFormDialogState();
+}
+
+class _PlanFormDialogState extends State<_PlanFormDialog> {
+  late String _durationType;
+  late bool _unlimitedAgents;
+  late bool _unlimitedProperties;
+
+  @override
+  void initState() {
+    super.initState();
+    _durationType = widget.initialDurationType;
+    _unlimitedAgents = (int.tryParse(widget.maxAgentsController.text) ?? 0) == 0;
+    _unlimitedProperties = (int.tryParse(widget.maxPropertiesController.text) ?? 0) == 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        backgroundColor: AppTheme.cardBlack,
+        title: Text(widget.isEdit ? 'ویرایش پلن' : 'افزودن پلن جدید', style: const TextStyle(color: AppTheme.gold)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: widget.nameController,
+                style: const TextStyle(color: AppTheme.textWhite),
+                decoration: const InputDecoration(labelText: 'نام پلن (مثلاً: طلایی، نقره‌ای)', prefixIcon: Icon(Icons.label, color: AppTheme.gold)),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: widget.durationValueController,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(color: AppTheme.textWhite),
+                      decoration: const InputDecoration(labelText: 'مدت زمان', prefixIcon: Icon(Icons.calendar_today, color: AppTheme.gold)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: _durationType,
+                    dropdownColor: AppTheme.cardBlack,
+                    style: const TextStyle(color: AppTheme.textWhite),
+                    items: const [
+                      DropdownMenuItem(value: 'days', child: Text('روز')),
+                      DropdownMenuItem(value: 'months', child: Text('ماه')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) setState(() => _durationType = v);
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: widget.priceController,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(color: AppTheme.textWhite),
+                decoration: const InputDecoration(labelText: 'قیمت (تومان) - 0 برای رایگان', prefixIcon: Icon(Icons.attach_money, color: AppTheme.gold)),
+              ),
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                title: const Text('مشاوران نامحدود', style: TextStyle(color: AppTheme.textWhite)),
+                value: _unlimitedAgents,
+                activeColor: AppTheme.gold,
+                onChanged: (v) {
+                  setState(() {
+                    _unlimitedAgents = v ?? false;
+                    if (_unlimitedAgents) widget.maxAgentsController.text = '0';
+                  });
+                },
+              ),
+              if (!_unlimitedAgents)
+                TextField(
+                  controller: widget.maxAgentsController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  decoration: const InputDecoration(labelText: 'سقف تعداد مشاوران', prefixIcon: Icon(Icons.people, color: AppTheme.gold)),
+                ),
+              const SizedBox(height: 12),
+              CheckboxListTile(
+                title: const Text('فایل ملک نامحدود', style: TextStyle(color: AppTheme.textWhite)),
+                value: _unlimitedProperties,
+                activeColor: AppTheme.gold,
+                onChanged: (v) {
+                  setState(() {
+                    _unlimitedProperties = v ?? false;
+                    if (_unlimitedProperties) widget.maxPropertiesController.text = '0';
+                  });
+                },
+              ),
+              if (!_unlimitedProperties)
+                TextField(
+                  controller: widget.maxPropertiesController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  decoration: const InputDecoration(labelText: 'سقف تعداد فایل ملک', prefixIcon: Icon(Icons.home, color: AppTheme.gold)),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('انصراف', style: TextStyle(color: AppTheme.textGrey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (widget.nameController.text.isEmpty || widget.durationValueController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نام و مدت زمان الزامی است')));
+                return;
+              }
+
+              final planData = {
+                'name': widget.nameController.text.trim(),
+                'duration_value': int.tryParse(toEnglishDigits(widget.durationValueController.text)) ?? 0,
+                'duration_type': _durationType,
+                'price': double.tryParse(toEnglishDigits(widget.priceController.text)) ?? 0,
+                'max_agents': _unlimitedAgents ? 0 : (int.tryParse(toEnglishDigits(widget.maxAgentsController.text)) ?? 0),
+                'max_properties': _unlimitedProperties ? 0 : (int.tryParse(toEnglishDigits(widget.maxPropertiesController.text)) ?? 0),
+                'is_active': 1,
+              };
+
+              widget.onSave(planData);
+            },
+            child: Text(widget.isEdit ? 'ذخیره' : 'افزودن'),
+          ),
+        ],
       ),
     );
   }
