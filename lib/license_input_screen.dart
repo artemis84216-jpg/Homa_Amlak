@@ -64,11 +64,11 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
       return;
     }
 
-    // ذخیره لایسنس
+    // ذخیره لایسنس با تاریخ Jalali
     await LicenseHelper.saveLicense(
       _licenseController.text.trim(),
       result['planId'],
-      result['expiryDate'],
+      result['expiryJalali'],
     );
 
     setState(() => _isLoading = false);
