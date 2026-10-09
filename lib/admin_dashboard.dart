@@ -13,6 +13,7 @@ import 'license_helper.dart';
 import 'license_input_screen.dart';
 import 'database_helper.dart';
 import 'app_utils.dart';
+import 'admin_generate_agent_qr_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -255,6 +256,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () => _navigateTo(const SettingsScreen(), 'تنظیمات')),
                         _buildCard(context, Icons.backup, 'پشتیبان', AppTheme.gold, () => _navigateTo(const BackupScreen(), 'پشتیبان')),
                         _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () => _navigateTo(const AboutScreen(), 'درباره ما')),
+                        _buildCard(context, Icons.qr_code_2, 'دعوت مشاور', AppTheme.gold, () => _navigateTo(const AdminGenerateAgentQrScreen(), 'دعوت مشاور')),
                       ],
                     ),
                   ),
