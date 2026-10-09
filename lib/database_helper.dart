@@ -115,6 +115,21 @@ class DatabaseHelper {
       // کپی داده‌های قبلی
       await db.execute('UPDATE plans SET duration_value = duration_months WHERE duration_value = 0');
     }
+    if (oldVersion < 11) {
+      await db.execute('''
+        CREATE TABLE invitations (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT NOT NULL UNIQUE,
+          inviter_name TEXT NOT NULL,
+          inviter_role TEXT NOT NULL,
+          target_role TEXT NOT NULL,
+          apk_download_url TEXT,
+          is_used INTEGER DEFAULT 0,
+          used_by_device_id TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
   }
 
   // --- متدهای املاک ---
