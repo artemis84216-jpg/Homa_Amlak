@@ -45,6 +45,26 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
     return '${toPersianDigits(date.year.toString())}/${toPersianDigits(date.month.toString().padLeft(2, '0'))}/${toPersianDigits(date.day.toString().padLeft(2, '0'))}';
   }
 
+  // محاسبه خودکار تاریخ انقضا بر اساس پلن
+  void _calculateExpiryDate() {
+    if (_selectedPlan == null) {
+      setState(() => _expiryDate = null);
+      return;
+    }
+
+    final durationValue = _selectedPlan!['duration_value'] ?? 0;
+    final durationType = _selectedPlan!['duration_type'] ?? 'months';
+    
+    Jalali expiry;
+    if (durationType == 'days') {
+      expiry = Jalali.now().addDays(durationValue);
+    } else {
+      expiry = Jalali.now().addMonths(durationValue);
+    }
+    
+    setState(() => _expiryDate = expiry);
+  }
+
   Future<void> _generateLicense() async {
     if (_deviceIdController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,7 +87,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
     setState(() => _isLoading = true);
 
-    // مستقیماً Jalali را به generateLicense می‌دهیم
     final license = LicenseHelper.generateLicense(
       deviceId: _deviceIdController.text.trim(),
       expiryDate: _expiryDate!,
@@ -170,14 +189,17 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                       child: Text(p['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite)),
                     );
                   }).toList(),
-                  onChanged: (val) => setState(() => _selectedPlan = val),
+                  onChanged: (val) {
+                    setState(() => _selectedPlan = val);
+                    _calculateExpiryDate(); // محاسبه خودکار تاریخ انقضا
+                  },
                 ),
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () async {
                     final picked = await showPersianDatePicker(
                       context: context,
-                      initialDate: Jalali.now().addDays(30),
+                      initialDate: _expiryDate ?? Jalali.now().addDays(30),
                       firstDate: Jalali.now(),
                       lastDate: Jalali(1450),
                       builder: (context, child) {
@@ -200,6 +222,28 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                   label: Text(_formatJalali(_expiryDate), style: const TextStyle(color: AppTheme.textWhite)),
                   style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.gold)),
                 ),
+                const SizedBox(height: 8),
+                if (_selectedPlan != null)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withOpacity(0.5)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'تاریخ انقضا به صورت خودکار بر اساس پلن "${_selectedPlan!['name']}" محاسبه شده است. می‌توانید آن را تغییر دهید.',
+                            style: const TextStyle(color: Colors.blue, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: _isLoading ? null : _generateLicense,
