@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 9, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 10, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -54,17 +54,11 @@ class DatabaseHelper {
         viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
-    // جدول جدید پلن‌های اشتراک
     await db.execute('''
       CREATE TABLE plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        duration_months INTEGER NOT NULL,
-        price REAL NOT NULL,
-        max_agents INTEGER NOT NULL,
-        max_properties INTEGER NOT NULL,
-        is_active INTEGER DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL,
+        duration_type TEXT DEFAULT 'months', price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL,
+        is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
   }
@@ -101,6 +95,12 @@ class DatabaseHelper {
           is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
+    }
+    if (oldVersion < 10) {
+      await db.execute('ALTER TABLE plans ADD COLUMN duration_value INTEGER DEFAULT 0');
+      await db.execute('ALTER TABLE plans ADD COLUMN duration_type TEXT DEFAULT "months"');
+      // کپی داده‌های قبلی
+      await db.execute('UPDATE plans SET duration_value = duration_months WHERE duration_value = 0');
     }
   }
 
@@ -223,7 +223,7 @@ class DatabaseHelper {
     return await db.query('contracts', orderBy: 'id DESC');
   }
 
-  // --- متدهای پلن‌ها (جدید) ---
+  // --- متدهای پلن‌ها ---
   Future<int> insertPlan(Map<String, dynamic> plan) async {
     final db = await instance.database;
     return await db.insert('plans', plan);
@@ -231,7 +231,7 @@ class DatabaseHelper {
 
   Future<List<Map<String, dynamic>>> getAllPlans() async {
     final db = await instance.database;
-    return await db.query('plans', orderBy: 'duration_months ASC');
+    return await db.query('plans', orderBy: 'duration_value ASC');
   }
 
   Future<int> updatePlan(int id, Map<String, dynamic> plan) async {
@@ -243,7 +243,8 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.delete('plans', where: 'id = ?', whereArgs: [id]);
   }
-    // --- متد پاک کردن کامل دیتابیس (برای توسعه‌دهنده) ---
+
+  // --- پاک کردن دیتابیس ---
   Future<void> resetDatabase() async {
     final db = await instance.database;
     await db.delete('properties');
