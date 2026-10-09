@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'device_info_helper.dart';
+import 'package:flutter/services.dart';
+import 'database_helper.dart';
+import 'license_helper.dart';
 import 'plans_management_screen.dart';
 import 'app_utils.dart';
 
@@ -11,32 +13,91 @@ class DeveloperPanelScreen extends StatefulWidget {
 }
 
 class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
-  bool _isLoading = true;
-  Map<String, String> _deviceInfo = {};
   final _passwordController = TextEditingController();
+  final _deviceIdController = TextEditingController();
   bool _isAuthenticated = false;
-  final String _developerPassword = '2026'; // رمز پنل توسعه‌دهنده
+  bool _isLoading = false;
+  List<Map<String, dynamic>> _plans = [];
+  Map<String, dynamic>? _selectedPlan;
+  DateTime? _expiryDate;
+  String? _generatedLicense;
+  final String _developerPassword = '2026';
 
-  @override
-  void initState() {
-    super.initState();
-    _loadDeviceInfo();
-  }
-
-  Future<void> _loadDeviceInfo() async {
-    final info = await DeviceInfoHelper.instance.getFullDeviceInfo();
-    setState(() {
-      _deviceInfo = info;
-      _isLoading = false;
-    });
+  Future<void> _loadPlans() async {
+    final data = await DatabaseHelper.instance.getAllPlans();
+    setState(() => _plans = data);
   }
 
   void _checkPassword() {
     if (_passwordController.text.trim() == _developerPassword) {
       setState(() => _isAuthenticated = true);
+      _loadPlans();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('رمز عبور اشتباه است'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _generateLicense() async {
+    if (_deviceIdController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('شناسه دستگاه مدیر را وارد کنید'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    if (_selectedPlan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('یک پلن انتخاب کنید'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    if (_expiryDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تاریخ انقضا را انتخاب کنید'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final license = LicenseHelper.generateLicense(
+      deviceId: _deviceIdController.text.trim(),
+      expiryDate: _expiryDate!,
+      planId: _selectedPlan!['id'],
+    );
+
+    setState(() {
+      _generatedLicense = license;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _resetDatabase() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: AppTheme.cardBlack,
+          title: const Text('⚠️ هشدار جدی', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          content: const Text(
+            'این عمل تمام اطلاعات دیتابیس مدیر (املاک، مشاوران، قراردادها و...) را پاک می‌کند. آیا مطمئن هستید؟',
+            style: TextStyle(color: AppTheme.textWhite),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('بله، پاک کن', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))),
+          ],
+        ),
+      ),
+    );
+
+    if (confirm == true) {
+      await DatabaseHelper.instance.resetDatabase();
+      await LicenseHelper.clearLicense();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✓ دیتابیس با موفقیت پاک شد'), backgroundColor: Colors.green),
       );
     }
   }
@@ -45,126 +106,153 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
-      appBar: AppBar(
-        title: const Text('پنل توسعه‌دهنده'),
-        centerTitle: true,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.gold))
-          : Directionality(
-              textDirection: TextDirection.rtl,
-              child: SingleChildScrollView(
+      appBar: AppBar(title: const Text('پنل توسعه‌دهنده'), centerTitle: true),
+      body: Directionality(
+        textDirection: TextDirection.rtl,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // هدر
+              Container(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [AppTheme.gold.withOpacity(0.3), AppTheme.gold.withOpacity(0.1)]),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.gold, width: 2),
+                ),
+                child: const Column(
                   children: [
-                    // هدر
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppTheme.gold.withOpacity(0.3), AppTheme.gold.withOpacity(0.1)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.gold, width: 2),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.developer_mode, color: AppTheme.gold, size: 50),
-                          SizedBox(height: 8),
-                          Text('پنل مدیریت توسعه‌دهنده', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.gold)),
-                          SizedBox(height: 4),
-                          Text('نسخه ۱.۰.۰ | Homa_Amlak', style: TextStyle(color: AppTheme.textYellow, fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // بخش شناسه دستگاه
-                    const Text('شناسه یکتای دستگاه مدیر', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: AppTheme.cardBlack,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.gold, width: 1),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.fingerprint, color: AppTheme.gold, size: 24),
-                              const SizedBox(width: 8),
-                              const Expanded(child: Text('Device ID:', style: TextStyle(color: AppTheme.textGrey, fontSize: 14))),
-                              IconButton(
-                                icon: const Icon(Icons.copy, color: AppTheme.gold, size: 20),
-                                onPressed: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('شناسه: ${_deviceInfo['deviceId']}')),
-                                  );
-                                },
-                                tooltip: 'کپی شناسه',
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          SelectableText(
-                            _deviceInfo['deviceId'] ?? 'نامشخص',
-                            style: const TextStyle(color: AppTheme.textYellow, fontSize: 14, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
-                          ),
-                          const Divider(color: AppTheme.gold, height: 24),
-                          Text('برند: ${_deviceInfo['brand']}', style: const TextStyle(color: AppTheme.textWhite)),
-                          const SizedBox(height: 4),
-                          Text('مدل: ${_deviceInfo['model']}', style: const TextStyle(color: AppTheme.textWhite)),
-                          const SizedBox(height: 4),
-                          Text('اندروید: ${_deviceInfo['androidVersion']}', style: const TextStyle(color: AppTheme.textWhite)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '⚠️ این شناسه را برای توسعه‌دهنده ارسال کنید تا کد لایسنس برایتان صادر شود.',
-                      style: TextStyle(color: AppTheme.textGrey, fontSize: 12),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // بخش ورود به مدیریت پلن‌ها با رمز
-                    if (!_isAuthenticated) ...[
-                      const Text('ورود به مدیریت پلن‌های اشتراک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: const TextStyle(color: AppTheme.textWhite),
-                        decoration: const InputDecoration(
-                          labelText: 'رمز عبور توسعه‌دهنده',
-                          prefixIcon: Icon(Icons.lock, color: AppTheme.gold),
-                          hintText: 'رمز را وارد کنید',
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _checkPassword,
-                        icon: const Icon(Icons.login),
-                        label: const Text('ورود به پنل پلن‌ها'),
-                      ),
-                    ] else ...[
-                      const Text('پلن‌های اشتراک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
-                      const SizedBox(height: 8),
-                      ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(context, MaterialPageRoute(builder: (_) => const PlansManagementScreen()));
-                        },
-                        icon: const Icon(Icons.subscriptions),
-                        label: const Text('مدیریت پلن‌های اشتراک'),
-                      ),
-                    ],
+                    Icon(Icons.developer_mode, color: AppTheme.gold, size: 50),
+                    SizedBox(height: 8),
+                    Text('پنل مدیریت توسعه‌دهنده', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.gold)),
+                    SizedBox(height: 4),
+                    Text('Homa_Amlak | نسخه ۱.۰.۰', style: TextStyle(color: AppTheme.textYellow, fontSize: 14)),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 24),
+
+              if (!_isAuthenticated) ...[
+                const Text('ورود به پنل توسعه‌دهنده', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  decoration: const InputDecoration(labelText: 'رمز عبور توسعه‌دهنده', prefixIcon: Icon(Icons.lock, color: AppTheme.gold)),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(onPressed: _checkPassword, icon: const Icon(Icons.login), label: const Text('ورود')),
+              ] else ...[
+                // بخش تولید کد لایسنس
+                const Text('۱. تولید کد لایسنس برای مدیر', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _deviceIdController,
+                  style: const TextStyle(color: AppTheme.textWhite, fontFamily: 'monospace'),
+                  decoration: const InputDecoration(labelText: 'شناسه دستگاه مدیر (Device ID)', prefixIcon: Icon(Icons.fingerprint, color: AppTheme.gold), hintText: 'Device ID را اینجا وارد کنید'),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<Map<String, dynamic>>(
+                  value: _selectedPlan,
+                  dropdownColor: AppTheme.cardBlack,
+                  decoration: const InputDecoration(labelText: 'انتخاب پلن', prefixIcon: Icon(Icons.subscriptions, color: AppTheme.gold)),
+                  items: _plans.map((p) {
+                    return DropdownMenuItem<Map<String, dynamic>>(
+                      value: p,
+                      child: Text(p['name'] ?? '', style: const TextStyle(color: AppTheme.textWhite)),
+                    );
+                  }).toList(),
+                  onChanged: (val) => setState(() => _selectedPlan = val),
+                ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now().add(const Duration(days: 30)),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) setState(() => _expiryDate = picked);
+                  },
+                  icon: const Icon(Icons.calendar_today, color: AppTheme.gold),
+                  label: Text(_expiryDate == null ? 'انتخاب تاریخ انقضا' : '${toPersianDigits(_expiryDate!.year.toString())}/${toPersianDigits(_expiryDate!.month.toString().padLeft(2, '0'))}/${toPersianDigits(_expiryDate!.day.toString().padLeft(2, '0'))}', style: const TextStyle(color: AppTheme.textWhite)),
+                  style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.gold)),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _generateLicense,
+                  icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.key),
+                  label: const Text('تولید کد لایسنس'),
+                ),
+
+                if (_generatedLicense != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(children: [Icon(Icons.check_circle, color: Colors.green), SizedBox(width: 8), Text('کد لایسنس تولید شد', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))]),
+                        const SizedBox(height: 12),
+                        SelectableText(
+                          _generatedLicense!,
+                          style: const TextStyle(color: AppTheme.textWhite, fontSize: 12, fontFamily: 'monospace'),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Clipboard.setData(ClipboardData(text: _generatedLicense!));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✓ کد لایسنس کپی شد')));
+                          },
+                          icon: const Icon(Icons.copy),
+                          label: const Text('کپی کد لایسنس'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const Divider(color: AppTheme.gold, height: 40),
+
+                // بخش مدیریت پلن‌ها
+                const Text('۲. مدیریت پلن‌های اشتراک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PlansManagementScreen())),
+                  icon: const Icon(Icons.settings),
+                  label: const Text('مدیریت پلن‌ها'),
+                ),
+
+                const Divider(color: AppTheme.gold, height: 40),
+
+                // بخش پاک کردن دیتابیس
+                const Text('۳. ابزارهای توسعه‌دهنده', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: _resetDatabase,
+                  icon: const Icon(Icons.delete_forever),
+                  label: const Text('پاک کردن کامل دیتابیس مدیر'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '⚠️ این قابلیت برای زمانی است که می‌خواهید اپلیکیشن را به یک املاک جدید بفروشید و نیاز دارید تمام اطلاعات مدیر قبلی پاک شود.',
+                  style: TextStyle(color: AppTheme.textGrey, fontSize: 12),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
