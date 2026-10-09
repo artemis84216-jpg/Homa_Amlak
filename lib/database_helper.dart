@@ -243,4 +243,16 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.delete('plans', where: 'id = ?', whereArgs: [id]);
   }
+    // --- متد پاک کردن کامل دیتابیس (برای توسعه‌دهنده) ---
+  Future<void> resetDatabase() async {
+    final db = await instance.database;
+    await db.delete('properties');
+    await db.delete('customers');
+    await db.delete('contracts');
+    await db.delete('payments');
+    await db.delete('expenses');
+    await db.delete('agents');
+    await db.delete('viewings');
+    await db.delete('plans');
+  }
 }
