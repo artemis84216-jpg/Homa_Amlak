@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 
 class LicenseHelper {
   static const String _secretKey = 'HOMA_AMLAK_2026_DEV_SECRET_KEY';
@@ -7,7 +8,7 @@ class LicenseHelper {
   // تولید کد لایسنس
   static String generateLicense({
     required String deviceId,
-    required DateTime expiryDate,
+    required Jalali expiryDate,
     required int planId,
   }) {
     final expiryStr = '${expiryDate.year}-${expiryDate.month.toString().padLeft(2, '0')}-${expiryDate.day.toString().padLeft(2, '0')}';
@@ -35,15 +36,28 @@ class LicenseHelper {
       final expectedChecksum = _generateChecksum(deviceId, expiryStr, planId);
       if (checksum != expectedChecksum) return {'error': 'invalid_checksum'};
       
-      // چک تاریخ
-      final expiryDate = DateTime.parse(expiryStr);
-      if (DateTime.now().isAfter(expiryDate)) return {'error': 'expired'};
+      // چک تاریخ - تبدیل تاریخ شمسی به میلادی برای مقایسه
+      final expiryParts = expiryStr.split('-');
+      final jalaliExpiry = Jalali(
+        int.parse(expiryParts[0]),
+        int.parse(expiryParts[1]),
+        int.parse(expiryParts[2]),
+      );
+      final expiryDateTime = jalaliExpiry.toDateTime();
+      final now = DateTime.now();
+      
+      // محاسبه روزهای باقی‌مانده (فقط بخش تاریخ، بدون ساعت)
+      final today = DateTime(now.year, now.month, now.day);
+      final expiryDay = DateTime(expiryDateTime.year, expiryDateTime.month, expiryDateTime.day);
+      final daysRemaining = expiryDay.difference(today).inDays;
+      
+      if (daysRemaining < 0) return {'error': 'expired'};
       
       return {
         'deviceId': deviceId,
-        'expiryDate': expiryDate,
+        'expiryJalali': jalaliExpiry, // ذخیره به صورت Jalali
         'planId': planId,
-        'daysRemaining': expiryDate.difference(DateTime.now()).inDays,
+        'daysRemaining': daysRemaining,
       };
     } catch (e) {
       return {'error': 'invalid_format'};
@@ -61,11 +75,12 @@ class LicenseHelper {
   }
   
   // ذخیره اطلاعات لایسنس
-  static Future<void> saveLicense(String licenseCode, int planId, DateTime expiryDate) async {
+  static Future<void> saveLicense(String licenseCode, int planId, Jalali expiryDate) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('license_code', licenseCode);
     await prefs.setInt('license_plan_id', planId);
-    await prefs.setString('license_expiry', expiryDate.toIso8601String());
+    // ذخیره تاریخ شمسی به صورت رشته
+    await prefs.setString('license_expiry_jalali', '${expiryDate.year}-${expiryDate.month.toString().padLeft(2, '0')}-${expiryDate.day.toString().padLeft(2, '0')}');
     await prefs.setString('license_activated_at', DateTime.now().toIso8601String());
   }
   
@@ -74,19 +89,34 @@ class LicenseHelper {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString('license_code');
     final planId = prefs.getInt('license_plan_id');
-    final expiry = prefs.getString('license_expiry');
-    if (code == null || planId == null || expiry == null) return null;
+    final expiryStr = prefs.getString('license_expiry_jalali');
+    if (code == null || planId == null || expiryStr == null) return null;
     
-    final expiryDate = DateTime.parse(expiry);
-    final daysRemaining = expiryDate.difference(DateTime.now()).inDays;
-    
-    return {
-      'code': code,
-      'planId': planId,
-      'expiry': expiryDate,
-      'daysRemaining': daysRemaining,
-      'isActive': daysRemaining >= 0,
-    };
+    try {
+      final parts = expiryStr.split('-');
+      final jalaliExpiry = Jalali(
+        int.parse(parts[0]),
+        int.parse(parts[1]),
+        int.parse(parts[2]),
+      );
+      
+      // تبدیل به DateTime برای مقایسه
+      final expiryDateTime = jalaliExpiry.toDateTime();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final expiryDay = DateTime(expiryDateTime.year, expiryDateTime.month, expiryDateTime.day);
+      final daysRemaining = expiryDay.difference(today).inDays;
+      
+      return {
+        'code': code,
+        'planId': planId,
+        'expiryJalali': jalaliExpiry,
+        'daysRemaining': daysRemaining,
+        'isActive': daysRemaining >= 0,
+      };
+    } catch (e) {
+      return null;
+    }
   }
   
   // پاک کردن لایسنس
@@ -94,7 +124,7 @@ class LicenseHelper {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('license_code');
     await prefs.remove('license_plan_id');
-    await prefs.remove('license_expiry');
+    await prefs.remove('license_expiry_jalali');
     await prefs.remove('license_activated_at');
   }
 }
