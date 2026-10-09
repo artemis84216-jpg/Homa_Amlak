@@ -45,14 +45,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
     return '${toPersianDigits(date.year.toString())}/${toPersianDigits(date.month.toString().padLeft(2, '0'))}/${toPersianDigits(date.day.toString().padLeft(2, '0'))}';
   }
 
-  Jalali _dateTimeToJalali(DateTime dt) {
-    return Jalali(dt.year, dt.month, dt.day);
-  }
-
-  DateTime _jalaliToDateTime(Jalali j) {
-    return j.toDateTime();
-  }
-
   Future<void> _generateLicense() async {
     if (_deviceIdController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,9 +67,10 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
     setState(() => _isLoading = true);
 
+    // مستقیماً Jalali را به generateLicense می‌دهیم
     final license = LicenseHelper.generateLicense(
       deviceId: _deviceIdController.text.trim(),
-      expiryDate: _jalaliToDateTime(_expiryDate!),
+      expiryDate: _expiryDate!,
       planId: _selectedPlan!['id'],
     );
 
