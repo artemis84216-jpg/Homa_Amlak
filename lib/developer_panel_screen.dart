@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'database_helper.dart';
 import 'license_helper.dart';
 import 'plans_management_screen.dart';
@@ -19,7 +20,7 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
   bool _isLoading = false;
   List<Map<String, dynamic>> _plans = [];
   Map<String, dynamic>? _selectedPlan;
-  DateTime? _expiryDate;
+  Jalali? _expiryDate;
   String? _generatedLicense;
   final String _developerPassword = '2026';
 
@@ -37,6 +38,19 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
         const SnackBar(content: Text('رمز عبور اشتباه است'), backgroundColor: Colors.red),
       );
     }
+  }
+
+  String _formatJalali(Jalali? date) {
+    if (date == null) return 'انتخاب تاریخ انقضا';
+    return '${toPersianDigits(date.year.toString())}/${toPersianDigits(date.month.toString().padLeft(2, '0'))}/${toPersianDigits(date.day.toString().padLeft(2, '0'))}';
+  }
+
+  Jalali _dateTimeToJalali(DateTime dt) {
+    return Jalali(dt.year, dt.month, dt.day);
+  }
+
+  DateTime _jalaliToDateTime(Jalali j) {
+    return j.toDateTime();
   }
 
   Future<void> _generateLicense() async {
@@ -63,7 +77,7 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
     final license = LicenseHelper.generateLicense(
       deviceId: _deviceIdController.text.trim(),
-      expiryDate: _expiryDate!,
+      expiryDate: _jalaliToDateTime(_expiryDate!),
       planId: _selectedPlan!['id'],
     );
 
@@ -114,7 +128,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // هدر
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -146,7 +159,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                 const SizedBox(height: 16),
                 ElevatedButton.icon(onPressed: _checkPassword, icon: const Icon(Icons.login), label: const Text('ورود')),
               ] else ...[
-                // بخش تولید کد لایسنس
                 const Text('۱. تولید کد لایسنس برای مدیر', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -170,16 +182,29 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () async {
-                    final picked = await showDatePicker(
+                    final picked = await showPersianDatePicker(
                       context: context,
-                      initialDate: DateTime.now().add(const Duration(days: 30)),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2030),
+                      initialDate: Jalali.now().addDays(30),
+                      firstDate: Jalali.now(),
+                      lastDate: Jalali(1450),
+                      builder: (context, child) {
+                        return Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: AppTheme.gold,
+                              onPrimary: Colors.black,
+                              surface: AppTheme.cardBlack,
+                              onSurface: AppTheme.textWhite,
+                            ),
+                          ),
+                          child: child!,
+                        );
+                      },
                     );
                     if (picked != null) setState(() => _expiryDate = picked);
                   },
                   icon: const Icon(Icons.calendar_today, color: AppTheme.gold),
-                  label: Text(_expiryDate == null ? 'انتخاب تاریخ انقضا' : '${toPersianDigits(_expiryDate!.year.toString())}/${toPersianDigits(_expiryDate!.month.toString().padLeft(2, '0'))}/${toPersianDigits(_expiryDate!.day.toString().padLeft(2, '0'))}', style: const TextStyle(color: AppTheme.textWhite)),
+                  label: Text(_formatJalali(_expiryDate), style: const TextStyle(color: AppTheme.textWhite)),
                   style: OutlinedButton.styleFrom(side: const BorderSide(color: AppTheme.gold)),
                 ),
                 const SizedBox(height: 16),
@@ -223,7 +248,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
                 const Divider(color: AppTheme.gold, height: 40),
 
-                // بخش مدیریت پلن‌ها
                 const Text('۲. مدیریت پلن‌های اشتراک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                 const SizedBox(height: 8),
                 ElevatedButton.icon(
@@ -234,7 +258,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
                 const Divider(color: AppTheme.gold, height: 40),
 
-                // بخش پاک کردن دیتابیس
                 const Text('۳. ابزارهای توسعه‌دهنده', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                 const SizedBox(height: 8),
                 ElevatedButton.icon(
