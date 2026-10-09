@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 8, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 9, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -35,15 +35,8 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE contracts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        property_id INTEGER,
-        property_title TEXT,
-        agent_name TEXT,
-        customer_name TEXT,
-        customer_phone TEXT,
-        deal_type TEXT,
-        amount REAL,
-        status TEXT DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        property_id INTEGER, property_title TEXT, agent_name TEXT, customer_name TEXT, customer_phone TEXT,
+        deal_type TEXT, amount REAL, status TEXT DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
     await db.execute('CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, contract_id INTEGER, amount REAL, date TEXT, type TEXT, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
@@ -57,14 +50,20 @@ class DatabaseHelper {
     ''');
     await db.execute('''
       CREATE TABLE viewings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL,
+        viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+    // جدول جدید پلن‌های اشتراک
+    await db.execute('''
+      CREATE TABLE plans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        property_id INTEGER,
-        customer_name TEXT NOT NULL,
-        customer_phone TEXT NOT NULL,
-        viewing_date TEXT NOT NULL,
-        viewing_time TEXT NOT NULL,
-        notes TEXT,
-        status TEXT DEFAULT 'pending',
+        name TEXT NOT NULL,
+        duration_months INTEGER NOT NULL,
+        price REAL NOT NULL,
+        max_agents INTEGER NOT NULL,
+        max_properties INTEGER NOT NULL,
+        is_active INTEGER DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -91,6 +90,15 @@ class DatabaseHelper {
         CREATE TABLE viewings (
           id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL,
           viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    }
+    if (oldVersion < 9) {
+      await db.execute('''
+        CREATE TABLE plans (
+          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_months INTEGER NOT NULL,
+          price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL,
+          is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
     }
@@ -170,8 +178,7 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.rawQuery('''
       SELECT v.*, p.title as property_title 
-      FROM viewings v 
-      LEFT JOIN properties p ON v.property_id = p.id 
+      FROM viewings v LEFT JOIN properties p ON v.property_id = p.id 
       ORDER BY v.id DESC
     ''');
   }
@@ -180,10 +187,8 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.rawQuery('''
       SELECT v.*, p.title as property_title, p.agent_name 
-      FROM viewings v 
-      JOIN properties p ON v.property_id = p.id 
-      WHERE p.agent_name = ? 
-      ORDER BY v.id DESC
+      FROM viewings v JOIN properties p ON v.property_id = p.id 
+      WHERE p.agent_name = ? ORDER BY v.id DESC
     ''', [agentName]);
   }
 
@@ -197,29 +202,17 @@ class DatabaseHelper {
     return await db.delete('viewings', where: 'id = ?', whereArgs: [id]);
   }
 
-  // --- متدهای معاملات و قراردادها ---
+  // --- متدهای معاملات ---
   Future<void> registerDeal({
-    required int propertyId,
-    required String propertyTitle,
-    required String agentName,
-    required String customerName,
-    required String customerPhone,
-    required String dealType,
-    required double amount,
+    required int propertyId, required String propertyTitle, required String agentName,
+    required String customerName, required String customerPhone, required String dealType, required double amount,
   }) async {
     final db = await instance.database;
     await db.transaction((txn) async {
       await txn.insert('contracts', {
-        'property_id': propertyId,
-        'property_title': propertyTitle,
-        'agent_name': agentName,
-        'customer_name': customerName,
-        'customer_phone': customerPhone,
-        'deal_type': dealType,
-        'amount': amount,
-        'status': 'active',
+        'property_id': propertyId, 'property_title': propertyTitle, 'agent_name': agentName,
+        'customer_name': customerName, 'customer_phone': customerPhone, 'deal_type': dealType, 'amount': amount, 'status': 'active',
       });
-      
       final newStatus = dealType == 'sale' ? 'sold' : 'rented';
       await txn.update('properties', {'status': newStatus}, where: 'id = ?', whereArgs: [propertyId]);
     });
@@ -228,5 +221,26 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAllContracts() async {
     final db = await instance.database;
     return await db.query('contracts', orderBy: 'id DESC');
+  }
+
+  // --- متدهای پلن‌ها (جدید) ---
+  Future<int> insertPlan(Map<String, dynamic> plan) async {
+    final db = await instance.database;
+    return await db.insert('plans', plan);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllPlans() async {
+    final db = await instance.database;
+    return await db.query('plans', orderBy: 'duration_months ASC');
+  }
+
+  Future<int> updatePlan(int id, Map<String, dynamic> plan) async {
+    final db = await instance.database;
+    return await db.update('plans', plan, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deletePlan(int id) async {
+    final db = await instance.database;
+    return await db.delete('plans', where: 'id = ?', whereArgs: [id]);
   }
 }
