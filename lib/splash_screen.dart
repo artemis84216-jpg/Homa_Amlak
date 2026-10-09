@@ -14,11 +14,12 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   int _logoTapCount = 0;
   Timer? _tapTimer;
+  Timer? _navigationTimer; // تایمر انتقال به صفحه لاگین
 
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), () {
+    _navigationTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
       }
@@ -33,6 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
     });
     if (_logoTapCount >= 5) {
       _tapTimer?.cancel();
+      _navigationTimer?.cancel(); // <-- اصلاح: کنسل کردن تایمر انتقال به لاگین
       setState(() => _logoTapCount = 0);
       Navigator.push(context, MaterialPageRoute(builder: (_) => const DeveloperPanelScreen()));
     }
@@ -41,6 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void dispose() {
     _tapTimer?.cancel();
+    _navigationTimer?.cancel();
     super.dispose();
   }
 
