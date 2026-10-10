@@ -20,7 +20,6 @@ class LicenseManager {
     }
 
     final maxAgents = plan['max_agents'] ?? 0;
-    // اگر 0 باشد یعنی نامحدود
     if (maxAgents == 0) {
       return {'allowed': true, 'current': 0, 'max': -1, 'isUnlimited': true};
     }
