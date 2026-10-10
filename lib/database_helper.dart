@@ -16,7 +16,7 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 11, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 12, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
@@ -74,6 +74,18 @@ class DatabaseHelper {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
+    await db.execute('''
+      CREATE TABLE licenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        estate_name TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        license_code TEXT NOT NULL,
+        plan_id INTEGER NOT NULL,
+        plan_name TEXT NOT NULL,
+        expiry_date TEXT NOT NULL,
+        issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -127,6 +139,19 @@ class DatabaseHelper {
           is_used INTEGER DEFAULT 0,
           used_by_device_id TEXT,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      ''');
+    if (oldVersion < 12) {
+      await db.execute('''
+        CREATE TABLE licenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          estate_name TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          license_code TEXT NOT NULL,
+          plan_id INTEGER NOT NULL,
+          plan_name TEXT NOT NULL,
+          expiry_date TEXT NOT NULL,
+          issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
     }
@@ -291,6 +316,31 @@ class DatabaseHelper {
   Future<int> markInvitationAsUsed(int id, String deviceId) async {
     final db = await instance.database;
     return await db.update('invitations', {'is_used': 1, 'used_by_device_id': deviceId}, where: 'id = ?', whereArgs: [id]);
+  }
+      // --- متدهای سوابق لایسنس ---
+  Future<int> insertLicense(Map<String, dynamic> license) async {
+    final db = await instance.database;
+    return await db.insert('licenses', license);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllLicenses() async {
+    final db = await instance.database;
+    return await db.query('licenses', orderBy: 'id DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> searchLicenses(String query) async {
+    final db = await instance.database;
+    return await db.query(
+      'licenses',
+      where: 'estate_name LIKE ? OR device_id LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+      orderBy: 'id DESC',
+    );
+  }
+
+  Future<int> deleteLicense(int id) async {
+    final db = await instance.database;
+    return await db.delete('licenses', where: 'id = ?', whereArgs: [id]);
   }
 
   // --- پاک کردن دیتابیس ---
