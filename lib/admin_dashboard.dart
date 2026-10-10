@@ -8,12 +8,13 @@ import 'expenses_screen.dart';
 import 'about_screen.dart';
 import 'settings_screen.dart';
 import 'backup_screen.dart';
+import 'admin_generate_agent_qr_screen.dart';
 import 'device_info_helper.dart';
 import 'license_helper.dart';
 import 'license_input_screen.dart';
+import 'license_manager.dart';
 import 'database_helper.dart';
 import 'app_utils.dart';
-import 'admin_generate_agent_qr_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -26,6 +27,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   String _deviceId = 'در حال دریافت...';
   Map<String, dynamic>? _license;
   String _planName = 'بدون لایسنس';
+  Map<String, dynamic>? _usageStats;
   bool _isLoading = true;
 
   @override
@@ -37,6 +39,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Future<void> _loadData() async {
     final id = await DeviceInfoHelper.instance.getDeviceId();
     final license = await LicenseHelper.getLicense();
+    final usage = await LicenseManager.getUsageStats();
     
     String planName = 'بدون لایسنس';
     if (license != null && license['isActive'] == true) {
@@ -49,10 +52,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
       _deviceId = id;
       _license = license;
       _planName = planName;
+      _usageStats = usage;
       _isLoading = false;
     });
 
-    // نمایش هشدار ۲ روز قبل از انقضا
     if (license != null && license['isActive'] == true) {
       final daysRemaining = license['daysRemaining'];
       if (daysRemaining <= 2 && daysRemaining >= 0) {
@@ -136,6 +139,48 @@ class _AdminDashboardState extends State<AdminDashboard> {
       return;
     }
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Widget _buildUsageRow(IconData icon, String label, Map<String, dynamic> usage) {
+    final current = usage['current'] ?? 0;
+    final max = usage['max'] ?? 0;
+    final isUnlimited = usage['isUnlimited'] ?? false;
+    
+    final currentStr = toPersianDigits(current.toString());
+    final maxStr = isUnlimited ? '∞' : toPersianDigits(max.toString());
+    
+    Color progressColor = Colors.green;
+    if (!isUnlimited && max > 0) {
+      final percentage = current / max;
+      if (percentage >= 1.0) {
+        progressColor = Colors.red;
+      } else if (percentage >= 0.8) {
+        progressColor = Colors.orange;
+      }
+    }
+    
+    return Row(
+      children: [
+        Icon(icon, color: AppTheme.textGrey, size: 18),
+        const SizedBox(width: 8),
+        Text('$label: ', style: const TextStyle(color: AppTheme.textGrey)),
+        Text(
+          '$currentStr از $maxStr',
+          style: TextStyle(color: progressColor, fontWeight: FontWeight.bold),
+        ),
+        if (!isUnlimited && max > 0) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: LinearProgressIndicator(
+              value: (current / max).clamp(0.0, 1.0),
+              backgroundColor: Colors.grey[800],
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              minHeight: 4,
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -239,6 +284,35 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       ],
                     ),
                   ),
+
+                  // کارت وضعیت مصرف پلن (جدید)
+                  if (_usageStats != null && _usageStats!['hasLicense'] == true)
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardBlack,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.gold, width: 1),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.bar_chart, color: AppTheme.gold, size: 20),
+                              SizedBox(width: 8),
+                              Text('وضعیت مصرف پلن', style: TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildUsageRow(Icons.people, 'مشاوران', _usageStats!['agents']),
+                          const SizedBox(height: 8),
+                          _buildUsageRow(Icons.home, 'فایل ملک', _usageStats!['properties']),
+                        ],
+                      ),
+                    ),
+
                   const SizedBox(height: 8),
 
                   Expanded(
@@ -253,10 +327,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         _buildCard(context, Icons.description, 'قراردادها', AppTheme.gold, () => _navigateTo(const AdminDealRegistrationScreen(), 'قراردادها')),
                         _buildCard(context, Icons.receipt_long, 'هزینه‌ها', AppTheme.gold, () => _navigateTo(const ExpensesScreen(), 'هزینه‌ها')),
                         _buildCard(context, Icons.bar_chart, 'گزارشات', AppTheme.gold, () => _navigateTo(const ReportsScreen(), 'گزارشات')),
-                        _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () => _navigateTo(const SettingsScreen(), 'تنظیمات')),
-                        _buildCard(context, Icons.backup, 'پشتیبان', AppTheme.gold, () => _navigateTo(const BackupScreen(), 'پشتیبان')),
-                        _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () => _navigateTo(const AboutScreen(), 'درباره ما')),
                         _buildCard(context, Icons.qr_code_2, 'دعوت مشاور', AppTheme.gold, () => _navigateTo(const AdminGenerateAgentQrScreen(), 'دعوت مشاور')),
+                        _buildCard(context, Icons.settings, 'تنظیمات', AppTheme.gold, () => _navigateTo(const SettingsScreen(), 'تنظیمات')),
+                        _buildCard(context, Icons.info, 'درباره ما', AppTheme.gold, () => _navigateTo(const AboutScreen(), 'درباره ما')),
                       ],
                     ),
                   ),
