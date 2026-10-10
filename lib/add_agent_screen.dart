@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'database_helper.dart';
 import 'app_utils.dart';
+import 'license_manager.dart';
 
 class AddAgentScreen extends StatefulWidget {
   final int? agentId;
@@ -18,7 +19,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _nationalIdController = TextEditingController();
-  final _passwordController = TextEditingController(); // <-- فیلد رمز عبور
+  final _passwordController = TextEditingController();
   final _commissionController = TextEditingController();
   final _salaryController = TextEditingController();
   final _notesController = TextEditingController();
@@ -44,7 +45,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
       _nameController.text = agent['name']?.toString() ?? '';
       _phoneController.text = agent['phone']?.toString() ?? '';
       _nationalIdController.text = agent['national_id']?.toString() ?? '';
-      _passwordController.text = agent['password']?.toString() ?? ''; // <-- بارگذاری رمز عبور
+      _passwordController.text = agent['password']?.toString() ?? '';
       _commissionController.text = agent['commission_rate']?.toString() ?? '0';
       _salaryController.text = agent['base_salary']?.toString() ?? '0';
       _notesController.text = agent['notes']?.toString() ?? '';
@@ -68,6 +69,48 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
 
   Future<void> _saveAgent() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // بررسی محدودیت فقط هنگام افزودن (نه ویرایش)
+    if (!_isEditMode) {
+      final check = await LicenseManager.canAddAgent();
+      if (!check['allowed']) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                backgroundColor: AppTheme.cardBlack,
+                title: const Row(
+                  children: [
+                    Icon(Icons.lock, color: Colors.red, size: 28),
+                    SizedBox(width: 8),
+                    Text('محدودیت پلن', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(check['message'] ?? 'امکان ثبت مشاور جدید وجود ندارد', style: const TextStyle(color: AppTheme.textWhite)),
+                    const SizedBox(height: 12),
+                    const Text('برای افزایش سقف مشاوران، پلن خود را ارتقا دهید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+    
     setState(() => _isLoading = true);
 
     try {
@@ -75,7 +118,7 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'national_id': _nationalIdController.text.trim(),
-        'password': _passwordController.text.trim(), // <-- ذخیره رمز عبور در دیتابیس
+        'password': _passwordController.text.trim(),
         'commission_rate': double.tryParse(toEnglishDigits(_commissionController.text)) ?? 0.0,
         'base_salary': double.tryParse(toEnglishDigits(_salaryController.text)) ?? 0.0,
         'status': _status,
@@ -135,8 +178,6 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                       const SizedBox(height: 8),
                       const Center(child: Text('برای تغییر تصویر ضربه بزنید', style: TextStyle(color: AppTheme.textGrey, fontSize: 12))),
                       const SizedBox(height: 24),
-                      
-                      // فیلد نام (نام کاربری)
                       TextFormField(
                         controller: _nameController, 
                         textDirection: TextDirection.rtl, 
@@ -145,18 +186,15 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                         validator: (v) => v == null || v.trim().isEmpty ? 'نام الزامی است' : null
                       ),
                       const SizedBox(height: 16),
-                      
-                      // فیلد رمز عبور
                       TextFormField(
                         controller: _passwordController, 
                         textDirection: TextDirection.rtl, 
-                        obscureText: true, // <-- مخفی کردن رمز عبور هنگام تایپ
+                        obscureText: true,
                         style: const TextStyle(color: AppTheme.textWhite),
                         decoration: const InputDecoration(labelText: 'رمز عبور', prefixIcon: Icon(Icons.lock, color: AppTheme.gold)), 
                         validator: (v) => v == null || v.trim().isEmpty ? 'رمز عبور الزامی است' : null
                       ),
                       const SizedBox(height: 16),
-                      
                       TextFormField(
                         controller: _phoneController, 
                         textDirection: TextDirection.rtl, 
