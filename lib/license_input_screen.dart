@@ -15,16 +15,31 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
   final _licenseController = TextEditingController();
   bool _isLoading = false;
   String _deviceId = 'در حال دریافت...';
+  Map<String, dynamic>? _currentLicense;
+  String _currentPlanName = 'بدون لایسنس';
 
   @override
   void initState() {
     super.initState();
-    _loadDeviceId();
+    _loadData();
   }
 
-  Future<void> _loadDeviceId() async {
+  Future<void> _loadData() async {
     final id = await DeviceInfoHelper.instance.getDeviceId();
-    setState(() => _deviceId = id);
+    final license = await LicenseHelper.getLicense();
+    
+    String planName = 'بدون لایسنس';
+    if (license != null && license['isActive'] == true) {
+      final plans = await DatabaseHelper.instance.getAllPlans();
+      final plan = plans.firstWhere((p) => p['id'] == license['planId'], orElse: () => {});
+      if (plan.isNotEmpty) planName = plan['name'] ?? 'پلن نامشخص';
+    }
+
+    setState(() {
+      _deviceId = id;
+      _currentLicense = license;
+      _currentPlanName = planName;
+    });
   }
 
   Future<void> _activateLicense() async {
@@ -72,9 +87,17 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
     );
 
     setState(() => _isLoading = false);
+    
+    // تشخیص اینکه آیا ارتقا است یا فعال‌سازی اولیه
+    final isUpgrade = _currentLicense != null && _currentLicense!['isActive'] == true;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('✓ لایسنس با موفقیت فعال شد - پلن: ${plan['name']}'),
+        content: Text(
+          isUpgrade 
+              ? '✓ پلن با موفقیت ارتقا یافت - پلن جدید: ${plan['name']} (اطلاعات شما حفظ شد)'
+              : '✓ لایسنس با موفقیت فعال شد - پلن: ${plan['name']}',
+        ),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 3),
       ),
@@ -84,6 +107,8 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final hasActiveLicense = _currentLicense != null && _currentLicense!['isActive'] == true;
+    
     return Scaffold(
       backgroundColor: AppTheme.backgroundBlack,
       appBar: AppBar(title: const Text('فعال‌سازی لایسنس'), centerTitle: true),
@@ -94,6 +119,50 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // نمایش وضعیت فعلی
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: hasActiveLicense ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: hasActiveLicense ? Colors.green : Colors.orange, width: 1),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(hasActiveLicense ? Icons.check_circle : Icons.info, color: hasActiveLicense ? Colors.green : Colors.orange, size: 24),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            hasActiveLicense ? 'ارتقا پلن' : 'فعال‌سازی اولیه',
+                            style: TextStyle(color: hasActiveLicense ? Colors.green : Colors.orange, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (hasActiveLicense) ...[
+                      Text('پلن فعلی: $_currentPlanName', style: const TextStyle(color: AppTheme.textWhite)),
+                      const SizedBox(height: 4),
+                      Text('روزهای باقی‌مانده: ${toPersianDigits((_currentLicense!['daysRemaining']).toString())}', style: const TextStyle(color: AppTheme.textWhite)),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '⚠️ با وارد کردن کد لایسنس جدید، پلن شما ارتقا می‌یابد و تمام اطلاعات شما (املاک، مشاوران، قراردادها و...) حفظ می‌شود.',
+                        style: TextStyle(color: Colors.green, fontSize: 13),
+                      ),
+                    ] else ...[
+                      const Text(
+                        'شما هنوز لایسنس فعالی ندارید. برای استفاده از اپلیکیشن، کد لایسنس را وارد کنید.',
+                        style: TextStyle(color: Colors.orange, fontSize: 13),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -134,7 +203,7 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isLoading ? null : _activateLicense,
                   icon: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2)) : const Icon(Icons.check_circle, size: 24),
-                  label: Text(_isLoading ? 'در حال بررسی...' : 'فعال‌سازی لایسنس', style: const TextStyle(fontSize: 18)),
+                  label: Text(_isLoading ? 'در حال بررسی...' : (hasActiveLicense ? 'ارتقا پلن' : 'فعال‌سازی لایسنس'), style: const TextStyle(fontSize: 18)),
                 ),
               ),
             ],
