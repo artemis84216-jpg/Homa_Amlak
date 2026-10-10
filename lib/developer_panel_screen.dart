@@ -4,6 +4,7 @@ import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'database_helper.dart';
 import 'license_helper.dart';
 import 'plans_management_screen.dart';
+import 'licenses_history_screen.dart';
 import 'app_utils.dart';
 
 class DeveloperPanelScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class DeveloperPanelScreen extends StatefulWidget {
 
 class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
   final _passwordController = TextEditingController();
+  final _estateNameController = TextEditingController();
   final _deviceIdController = TextEditingController();
   bool _isAuthenticated = false;
   bool _isLoading = false;
@@ -45,7 +47,6 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
     return '${toPersianDigits(date.year.toString())}/${toPersianDigits(date.month.toString().padLeft(2, '0'))}/${toPersianDigits(date.day.toString().padLeft(2, '0'))}';
   }
 
-  // محاسبه خودکار تاریخ انقضا بر اساس پلن
   void _calculateExpiryDate() {
     if (_selectedPlan == null) {
       setState(() => _expiryDate = null);
@@ -66,6 +67,12 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
   }
 
   Future<void> _generateLicense() async {
+    if (_estateNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('نام املاک را وارد کنید'), backgroundColor: Colors.red),
+      );
+      return;
+    }
     if (_deviceIdController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('شناسه دستگاه مدیر را وارد کنید'), backgroundColor: Colors.red),
@@ -93,10 +100,24 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
       planId: _selectedPlan!['id'],
     );
 
+    // ذخیره لایسنس در جدول سوابق
+    await DatabaseHelper.instance.insertLicense({
+      'estate_name': _estateNameController.text.trim(),
+      'device_id': _deviceIdController.text.trim(),
+      'license_code': license,
+      'plan_id': _selectedPlan!['id'],
+      'plan_name': _selectedPlan!['name'],
+      'expiry_date': _formatJalali(_expiryDate),
+    });
+
     setState(() {
       _generatedLicense = license;
       _isLoading = false;
     });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('✓ لایسنس تولید و در سوابق ذخیره شد'), backgroundColor: AppTheme.gold),
+    );
   }
 
   Future<void> _resetDatabase() async {
@@ -173,6 +194,14 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
               ] else ...[
                 const Text('۱. تولید کد لایسنس برای مدیر', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                 const SizedBox(height: 8),
+                
+                TextFormField(
+                  controller: _estateNameController,
+                  style: const TextStyle(color: AppTheme.textWhite),
+                  decoration: const InputDecoration(labelText: 'نام املاک (مثلاً: املاک هما)', prefixIcon: Icon(Icons.business, color: AppTheme.gold)),
+                ),
+                const SizedBox(height: 16),
+                
                 TextFormField(
                   controller: _deviceIdController,
                   style: const TextStyle(color: AppTheme.textWhite, fontFamily: 'monospace'),
@@ -191,7 +220,7 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                   }).toList(),
                   onChanged: (val) {
                     setState(() => _selectedPlan = val);
-                    _calculateExpiryDate(); // محاسبه خودکار تاریخ انقضا
+                    _calculateExpiryDate();
                   },
                 ),
                 const SizedBox(height: 16),
@@ -285,8 +314,16 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
 
                 const Divider(color: AppTheme.gold, height: 40),
 
-                const Text('۲. مدیریت پلن‌های اشتراک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
+                const Text('۲. مدیریت و سوابق', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                 const SizedBox(height: 8),
+                
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LicensesHistoryScreen())),
+                  icon: const Icon(Icons.history),
+                  label: const Text('سوابق لایسنس‌های صادر شده'),
+                ),
+                const SizedBox(height: 12),
+                
                 ElevatedButton.icon(
                   onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PlansManagementScreen())),
                   icon: const Icon(Icons.settings),
