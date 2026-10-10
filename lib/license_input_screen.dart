@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'database_helper.dart';
 import 'device_info_helper.dart';
 import 'license_helper.dart';
@@ -79,27 +80,41 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
       return;
     }
 
-    // ذخیره لایسنس با تاریخ Jalali
+    // محاسبه روزهای باقی‌مانده از لایسنس قبلی (برای ارتقا)
+    int bonusDays = 0;
+    if (_currentLicense != null && _currentLicense!['isActive'] == true) {
+      bonusDays = _currentLicense!['daysRemaining'] ?? 0;
+    }
+
+    // افزایش تاریخ انقضای جدید با روزهای باقی‌مانده
+    Jalali finalExpiry = result['expiryJalali'];
+    if (bonusDays > 0) {
+      finalExpiry = finalExpiry.addDays(bonusDays);
+    }
+
+    // ذخیره لایسنس با تاریخ نهایی
     await LicenseHelper.saveLicense(
       _licenseController.text.trim(),
       result['planId'],
-      result['expiryJalali'],
+      finalExpiry,
     );
 
     setState(() => _isLoading = false);
     
-    // تشخیص اینکه آیا ارتقا است یا فعال‌سازی اولیه
     final isUpgrade = _currentLicense != null && _currentLicense!['isActive'] == true;
+    
+    String successMessage;
+    if (isUpgrade) {
+      successMessage = '✓ پلن با موفقیت ارتقا یافت - پلن جدید: ${plan['name']}\n${toPersianDigits(bonusDays.toString())} روز باقی‌مانده از پلن قبلی به پلن جدید اضافه شد.';
+    } else {
+      successMessage = '✓ لایسنس با موفقیت فعال شد - پلن: ${plan['name']}';
+    }
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          isUpgrade 
-              ? '✓ پلن با موفقیت ارتقا یافت - پلن جدید: ${plan['name']} (اطلاعات شما حفظ شد)'
-              : '✓ لایسنس با موفقیت فعال شد - پلن: ${plan['name']}',
-        ),
+        content: Text(successMessage),
         backgroundColor: Colors.green,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 4),
       ),
     );
     Navigator.pop(context, true);
@@ -119,7 +134,6 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // نمایش وضعیت فعلی
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -132,7 +146,7 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(hasActiveLicense ? Icons.check_circle : Icons.info, color: hasActiveLicense ? Colors.green : Colors.orange, size: 24),
+                        Icon(hasActiveLicense ? Icons.upgrade : Icons.info, color: hasActiveLicense ? Colors.green : Colors.orange, size: 24),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -148,9 +162,24 @@ class _LicenseInputScreenState extends State<LicenseInputScreen> {
                       const SizedBox(height: 4),
                       Text('روزهای باقی‌مانده: ${toPersianDigits((_currentLicense!['daysRemaining']).toString())}', style: const TextStyle(color: AppTheme.textWhite)),
                       const SizedBox(height: 8),
-                      const Text(
-                        '⚠️ با وارد کردن کد لایسنس جدید، پلن شما ارتقا می‌یابد و تمام اطلاعات شما (املاک، مشاوران، قراردادها و...) حفظ می‌شود.',
-                        style: TextStyle(color: Colors.green, fontSize: 13),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.green, size: 18),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'با ارتقا پلن، روزهای باقی‌مانده از پلن فعلی به صورت خودکار به پلن جدید اضافه می‌شود و هیچ اطلاعاتی از بین نمی‌رود.',
+                                style: TextStyle(color: Colors.green, fontSize: 12),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ] else ...[
                       const Text(
