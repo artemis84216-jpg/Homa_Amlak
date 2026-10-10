@@ -27,27 +27,26 @@ jobs:
       - name: Create android folder
         run: flutter create . --platforms android --project-name homa_amlak
       
+      - name: Optimize Gradle Memory (Fix Hanging)
+        run: |
+          echo "org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8" >> android/gradle.properties
+          echo "org.gradle.parallel=true" >> android/gradle.properties
+          echo "org.gradle.daemon=false" >> android/gradle.properties
+      
       - name: Patch Android Configurations
         run: |
-          # ۱. تغییر compileSdk به ۳۴
           sed -i 's/compileSdk.*/compileSdk 34/' android/app/build.gradle
           sed -i 's/compileSdkVersion.*/compileSdkVersion 34/' android/app/build.gradle
-          
-          # ۲. تغییر نسخه Kotlin
           sed -i 's/org\.jetbrains\.kotlin\.android" version ".*"/org.jetbrains.kotlin.android" version "1.9.24"/' android/settings.gradle
           sed -i "s/ext\.kotlin_version.*/ext.kotlin_version = '1.9.24'/" android/build.gradle
-          
-          # ۳. مجوزهای دوربین و گالری
           sed -i '/<\/manifest>/i \    <uses-permission android:name="android.permission.CAMERA"/>\n    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>' android/app/src/main/AndroidManifest.xml
-          
-          # ۴. مجوز باز کردن لینک‌های خارجی (مهم برای سامانه خودنویس)
           sed -i '/<application/i \    <queries>\n        <intent>\n            <action android:name="android.intent.action.VIEW" />\n            <data android:scheme="https" />\n        </intent>\n    </queries>' android/app/src/main/AndroidManifest.xml
 
       - name: Install dependencies
         run: flutter pub get
       
       - name: Build APK
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
       
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
