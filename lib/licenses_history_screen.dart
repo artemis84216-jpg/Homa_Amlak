@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:persian_datetime_picker/persian_datetime_picker.dart';
 import 'database_helper.dart';
 import 'app_utils.dart';
 
@@ -54,6 +55,27 @@ class _LicensesHistoryScreenState extends State<LicensesHistoryScreen> {
     if (confirm == true) {
       await DatabaseHelper.instance.deleteLicense(id);
       _loadLicenses();
+    }
+  }
+
+  // تبدیل تاریخ میلادی به شمسی
+  String _formatIssuedAt(String? issuedAt) {
+    if (issuedAt == null || issuedAt.isEmpty) return 'نامشخص';
+    try {
+      // فرمت SQLite: "2026-10-11 14:30:00"
+      final parts = issuedAt.split(' ');
+      final dateParts = parts[0].split('-');
+      if (dateParts.length != 3) return issuedAt;
+      
+      final miladi = DateTime(
+        int.parse(dateParts[0]),
+        int.parse(dateParts[1]),
+        int.parse(dateParts[2]),
+      );
+      final jalali = Jalali.fromDateTime(miladi);
+      return '${toPersianDigits(jalali.year.toString())}/${toPersianDigits(jalali.month.toString().padLeft(2, '0'))}/${toPersianDigits(jalali.day.toString().padLeft(2, '0'))}';
+    } catch (e) {
+      return issuedAt;
     }
   }
 
@@ -134,6 +156,8 @@ class _LicensesHistoryScreenState extends State<LicensesHistoryScreen> {
                                     ),
                                     const SizedBox(height: 12),
                                     _buildInfoRow('پلن', license['plan_name'] ?? ''),
+                                    const SizedBox(height: 8),
+                                    _buildInfoRow('تاریخ شروع', _formatIssuedAt(license['issued_at'])),
                                     const SizedBox(height: 8),
                                     _buildInfoRow('تاریخ انقضا', license['expiry_date'] ?? ''),
                                     const SizedBox(height: 8),
