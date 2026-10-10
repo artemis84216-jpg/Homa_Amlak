@@ -115,43 +115,25 @@ class DatabaseHelper {
     if (oldVersion < 9) {
       await db.execute('''
         CREATE TABLE plans (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_months INTEGER NOT NULL,
-          price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL,
+          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL,
+          duration_type TEXT DEFAULT 'months', price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL,
           is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
     }
-    if (oldVersion < 10) {
-      await db.execute('ALTER TABLE plans ADD COLUMN duration_value INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE plans ADD COLUMN duration_type TEXT DEFAULT "months"');
-      // کپی داده‌های قبلی
-      await db.execute('UPDATE plans SET duration_value = duration_months WHERE duration_value = 0');
-    }
     if (oldVersion < 11) {
       await db.execute('''
         CREATE TABLE invitations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          code TEXT NOT NULL UNIQUE,
-          inviter_name TEXT NOT NULL,
-          inviter_role TEXT NOT NULL,
-          target_role TEXT NOT NULL,
-          apk_download_url TEXT,
-          is_used INTEGER DEFAULT 0,
-          used_by_device_id TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, inviter_name TEXT NOT NULL, inviter_role TEXT NOT NULL,
+          target_role TEXT NOT NULL, apk_download_url TEXT, is_used INTEGER DEFAULT 0, used_by_device_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
+    }
     if (oldVersion < 12) {
       await db.execute('''
         CREATE TABLE licenses (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          estate_name TEXT NOT NULL,
-          device_id TEXT NOT NULL,
-          license_code TEXT NOT NULL,
-          plan_id INTEGER NOT NULL,
-          plan_name TEXT NOT NULL,
-          expiry_date TEXT NOT NULL,
-          issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          id INTEGER PRIMARY KEY AUTOINCREMENT, estate_name TEXT NOT NULL, device_id TEXT NOT NULL, license_code TEXT NOT NULL,
+          plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL, expiry_date TEXT NOT NULL, issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       ''');
     }
@@ -296,7 +278,8 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.delete('plans', where: 'id = ?', whereArgs: [id]);
   }
-    // --- متدهای دعوت‌نامه‌ها ---
+
+  // --- متدهای دعوت‌نامه‌ها ---
   Future<int> insertInvitation(Map<String, dynamic> invitation) async {
     final db = await instance.database;
     return await db.insert('invitations', invitation);
@@ -317,7 +300,8 @@ class DatabaseHelper {
     final db = await instance.database;
     return await db.update('invitations', {'is_used': 1, 'used_by_device_id': deviceId}, where: 'id = ?', whereArgs: [id]);
   }
-      // --- متدهای سوابق لایسنس ---
+
+  // --- متدهای سوابق لایسنس ---
   Future<int> insertLicense(Map<String, dynamic> license) async {
     final db = await instance.database;
     return await db.insert('licenses', license);
@@ -354,5 +338,7 @@ class DatabaseHelper {
     await db.delete('agents');
     await db.delete('viewings');
     await db.delete('plans');
+    await db.delete('invitations');
+    await db.delete('licenses');
   }
 }
