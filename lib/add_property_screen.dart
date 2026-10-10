@@ -6,6 +6,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'database_helper.dart';
 import 'app_utils.dart';
+import 'license_manager.dart';
 
 class AddPropertyScreen extends StatefulWidget {
   final int? propertyId;
@@ -21,7 +22,7 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
   final _titleController = TextEditingController();
   final _areaController = TextEditingController();
   final _priceController = TextEditingController();
-  final _monthlyRentController = TextEditingController(); // <-- فیلد جدید اجاره ماهیانه
+  final _monthlyRentController = TextEditingController();
   final _addressController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _ownerPhoneController = TextEditingController();
@@ -59,16 +60,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
       _selectedType = data['type'] ?? 'آپارتمان';
       _listingType = data['listing_type'] ?? 'sale';
       _areaController.text = data['area']?.toString() ?? '';
-      
       final price = data['price']?.toInt() ?? 0;
       _priceController.text = price.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},');
-      
-      // بارگذاری اجاره ماهیانه
       final monthlyRent = data['monthly_rent']?.toInt() ?? 0;
       _monthlyRentController.text = monthlyRent > 0 
           ? monthlyRent.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')
           : '';
-      
       _addressController.text = data['address'] ?? '';
       _ownerNameController.text = data['owner_name'] ?? '';
       _ownerPhoneController.text = data['owner_phone'] ?? '';
@@ -109,6 +106,48 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
 
   Future<void> _saveProperty() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // بررسی محدودیت فقط هنگام افزودن (نه ویرایش)
+    if (!_isEditMode) {
+      final check = await LicenseManager.canAddProperty();
+      if (!check['allowed']) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                backgroundColor: AppTheme.cardBlack,
+                title: const Row(
+                  children: [
+                    Icon(Icons.lock, color: Colors.red, size: 28),
+                    SizedBox(width: 8),
+                    Text('محدودیت پلن', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(check['message'] ?? 'امکان ثبت ملک جدید وجود ندارد', style: const TextStyle(color: AppTheme.textWhite)),
+                    const SizedBox(height: 12),
+                    const Text('برای افزایش سقف فایل ملک، پلن خود را ارتقا دهید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return;
+      }
+    }
+    
     setState(() => _isLoading = true);
 
     try {
@@ -208,7 +247,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                         )
                       ),
                       const Divider(height: 32, color: AppTheme.gold),
-                      
                       const Text('نوع معامله', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                       const SizedBox(height: 12),
                       Row(
@@ -242,7 +280,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           ),
                         ],
                       ),
-                      
                       const Divider(height: 32, color: AppTheme.gold),
                       const Text('مشخصات ملک', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.gold)),
                       const SizedBox(height: 12),
@@ -279,8 +316,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           ),
                         ],
                       ),
-                      
-                      // فیلد اجاره ماهیانه - فقط در حالت اجاره نمایش داده می‌شود
                       if (_listingType == 'rent') ...[
                         const SizedBox(height: 16),
                         TextFormField(
@@ -294,7 +329,6 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                           }
                         ),
                       ],
-                      
                       const SizedBox(height: 16),
                       Row(
                         children: [
