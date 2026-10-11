@@ -6,7 +6,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'database_helper.dart';
 import 'app_utils.dart';
-import 'license_manager.dart';
+import 'license_helper.dart';
 
 class AddPropertyScreen extends StatefulWidget {
   final int? propertyId;
@@ -109,8 +109,14 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
     
     // بررسی محدودیت فقط هنگام افزودن (نه ویرایش)
     if (!_isEditMode) {
-      final check = await LicenseManager.canAddProperty();
-      if (!check['allowed']) {
+      // 1. دریافت لایسنس فعلی
+      final license = await LicenseHelper.getLicense();
+      
+      print('=== DEBUG: Property License Check ===');
+      print('License: $license');
+      
+      if (license == null || license['isActive'] != true) {
+        print('ERROR: No active license');
         if (mounted) {
           showDialog(
             context: context,
@@ -122,17 +128,12 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
                   children: [
                     Icon(Icons.lock, color: Colors.red, size: 28),
                     SizedBox(width: 8),
-                    Text('محدودیت پلن', style: TextStyle(color: Colors.red)),
+                    Text('لایسنس فعال ندارید', style: TextStyle(color: Colors.red)),
                   ],
                 ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(check['message'] ?? 'امکان ثبت ملک جدید وجود ندارد', style: const TextStyle(color: AppTheme.textWhite)),
-                    const SizedBox(height: 12),
-                    const Text('برای افزایش سقف فایل ملک، پلن خود را ارتقا دهید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
-                  ],
+                content: const Text(
+                  'برای ثبت ملک جدید، ابتدا باید لایسنس فعال داشته باشید.',
+                  style: TextStyle(color: AppTheme.textWhite),
                 ),
                 actions: [
                   TextButton(
@@ -145,6 +146,99 @@ class _AddPropertyScreenState extends State<AddPropertyScreen> {
           );
         }
         return;
+      }
+      
+      // 2. دریافت پلن فعلی
+      final plans = await DatabaseHelper.instance.getAllPlans();
+      final plan = plans.firstWhere((p) => p['id'] == license['planId'], orElse: () => {});
+      
+      print('Plan: $plan');
+      
+      if (plan.isEmpty) {
+        print('ERROR: Plan not found');
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                backgroundColor: AppTheme.cardBlack,
+                title: const Text('خطا', style: TextStyle(color: Colors.red)),
+                content: const Text('پلن مربوطه یافت نشد', style: TextStyle(color: AppTheme.textWhite)),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // 3. بررسی سقف فایل ملک
+      final maxProperties = plan['max_properties'] ?? 0;
+      print('Max Properties: $maxProperties');
+      
+      if (maxProperties > 0) { // اگر 0 باشد یعنی نامحدود
+        final allProperties = await DatabaseHelper.instance.getAllProperties();
+        final currentCount = allProperties.length;
+        
+        print('Current Properties: $currentCount');
+        print('Allowed: ${currentCount < maxProperties}');
+        
+        if (currentCount >= maxProperties) {
+          print('BLOCKED: Limit reached');
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (ctx) => Directionality(
+                textDirection: TextDirection.rtl,
+                child: AlertDialog(
+                  backgroundColor: AppTheme.cardBlack,
+                  title: const Row(
+                    children: [
+                      Icon(Icons.lock, color: Colors.red, size: 28),
+                      SizedBox(width: 8),
+                      Text('محدودیت پلن', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'سقف فایل ملک پلن شما پر شده است',
+                        style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'تعداد فعلی: ${toPersianDigits(currentCount.toString())} از ${toPersianDigits(maxProperties.toString())}',
+                        style: const TextStyle(color: AppTheme.textYellow),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'برای افزایش سقف فایل ملک، پلن خود را ارتقا دهید.',
+                        style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return;
+        }
+      } else {
+        print('Unlimited properties allowed');
       }
     }
     
