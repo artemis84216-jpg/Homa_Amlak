@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'properties_list_screen.dart';
 import 'add_property_screen.dart';
-import 'viewings_list_screen.dart';
-import 'app_utils.dart';
 import 'agent_generate_customer_qr_screen.dart';
+import 'app_utils.dart';
 
 class AgentDashboard extends StatelessWidget {
   final Map<String, dynamic> agentData;
@@ -49,14 +48,12 @@ class AgentDashboard extends StatelessWidget {
             _buildCard(context, Icons.home, 'املاک من', AppTheme.gold, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => PropertiesListScreen(currentAgent: agentData)));
             }),
-            _buildCard(context, Icons.event, 'بازدیدها', AppTheme.gold, () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => ViewingsListScreen(agentData: agentData)));
-            }),
-            _buildCard(context, Icons.people, 'مشتریان', AppTheme.gold, () { _showComingSoon(context, 'مشتریان'); }),
-            _buildCard(context, Icons.attach_money, 'کمیسیون من', AppTheme.gold, () { _showComingSoon(context, 'کمیسیون'); }),
             _buildCard(context, Icons.qr_code_2, 'دعوت مشتری', AppTheme.gold, () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => AgentGenerateCustomerQrScreen(agentData: agentData)));
             }),
+            _buildCard(context, Icons.people, 'مشتریان', AppTheme.gold, () { _showComingSoon(context, 'مشتریان'); }),
+            _buildCard(context, Icons.calendar_today, 'بازدیدها', AppTheme.gold, () { _showComingSoon(context, 'بازدیدها'); }),
+            _buildCard(context, Icons.attach_money, 'کمیسیون من', AppTheme.gold, () { _showComingSoon(context, 'کمیسیون'); }),
           ],
         ),
       ),
