@@ -16,329 +16,152 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 12, onCreate: _createDB, onUpgrade: _upgradeDB);
+    return await openDatabase(path, version: 13, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE properties (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL, type TEXT, area REAL, price REAL, monthly_rent REAL DEFAULT 0, address TEXT,
-        owner_name TEXT, owner_phone TEXT,
-        agent_name TEXT, agent_phone TEXT,
-        bedrooms INTEGER DEFAULT 0, floor INTEGER DEFAULT 0, total_floors INTEGER DEFAULT 0,
-        listing_type TEXT DEFAULT 'sale',
-        images TEXT, is_public INTEGER DEFAULT 1, status TEXT DEFAULT 'available', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, type TEXT, area REAL, price REAL, monthly_rent REAL DEFAULT 0, address TEXT,
+        owner_name TEXT, owner_phone TEXT, agent_name TEXT, agent_phone TEXT, bedrooms INTEGER DEFAULT 0, floor INTEGER DEFAULT 0, total_floors INTEGER DEFAULT 0,
+        listing_type TEXT DEFAULT 'sale', images TEXT, is_public INTEGER DEFAULT 1, status TEXT DEFAULT 'available', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     ''');
     await db.execute('CREATE TABLE customers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, national_id TEXT, phone TEXT, role TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
-    await db.execute('''
-      CREATE TABLE contracts (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        property_id INTEGER, property_title TEXT, agent_name TEXT, customer_name TEXT, customer_phone TEXT,
-        deal_type TEXT, amount REAL, status TEXT DEFAULT 'active', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
+    await db.execute('CREATE TABLE contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, property_title TEXT, agent_name TEXT, customer_name TEXT, customer_phone TEXT, deal_type TEXT, amount REAL, status TEXT DEFAULT "active", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
     await db.execute('CREATE TABLE payments (id INTEGER PRIMARY KEY AUTOINCREMENT, contract_id INTEGER, amount REAL, date TEXT, type TEXT, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await db.execute('CREATE TABLE agents (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, national_id TEXT, password TEXT, profile_image TEXT, commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT "active", join_date TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await db.execute('CREATE TABLE viewings (id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL, viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT "pending", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await db.execute('CREATE TABLE plans (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL, duration_type TEXT DEFAULT "months", price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL, is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await db.execute('CREATE TABLE invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, inviter_name TEXT NOT NULL, inviter_role TEXT NOT NULL, target_role TEXT NOT NULL, apk_download_url TEXT, is_used INTEGER DEFAULT 0, used_by_device_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await db.execute('CREATE TABLE licenses (id INTEGER PRIMARY KEY AUTOINCREMENT, estate_name TEXT NOT NULL, device_id TEXT NOT NULL, license_code TEXT NOT NULL, plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL, expiry_date TEXT NOT NULL, issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    
+    // جدول جدید دسته‌بندی هزینه‌ها
+    await db.execute('CREATE TABLE expense_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)');
+    await db.execute('INSERT INTO expense_categories (name) VALUES ("قبوض"), ("حقوق"), ("تبلیغات"), ("تعمیرات"), ("سایر")');
+    
     await db.execute('CREATE TABLE expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, category TEXT, amount REAL, date TEXT, description TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
-    await db.execute('''
-      CREATE TABLE agents (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT, national_id TEXT, 
-        password TEXT, profile_image TEXT,
-        commission_rate REAL DEFAULT 0.0, base_salary REAL DEFAULT 0.0, status TEXT DEFAULT 'active', join_date TEXT, notes TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE viewings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL,
-        viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE plans (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL,
-        duration_type TEXT DEFAULT 'months', price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL,
-        is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE invitations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        code TEXT NOT NULL UNIQUE,
-        inviter_name TEXT NOT NULL,
-        inviter_role TEXT NOT NULL,
-        target_role TEXT NOT NULL,
-        apk_download_url TEXT,
-        is_used INTEGER DEFAULT 0,
-        used_by_device_id TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
-    await db.execute('''
-      CREATE TABLE licenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        estate_name TEXT NOT NULL,
-        device_id TEXT NOT NULL,
-        license_code TEXT NOT NULL,
-        plan_id INTEGER NOT NULL,
-        plan_name TEXT NOT NULL,
-        expiry_date TEXT NOT NULL,
-        issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    ''');
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) { await db.execute('ALTER TABLE properties ADD COLUMN owner_name TEXT'); await db.execute('ALTER TABLE properties ADD COLUMN owner_phone TEXT'); }
     if (oldVersion < 3) { await db.execute('ALTER TABLE properties ADD COLUMN images TEXT'); }
     if (oldVersion < 4) { await db.execute('ALTER TABLE properties ADD COLUMN agent_name TEXT'); await db.execute('ALTER TABLE properties ADD COLUMN agent_phone TEXT'); }
-    if (oldVersion < 5) {
-      await db.execute('ALTER TABLE agents ADD COLUMN password TEXT');
-      await db.execute('ALTER TABLE agents ADD COLUMN profile_image TEXT');
-      await db.execute('ALTER TABLE properties ADD COLUMN is_public INTEGER DEFAULT 1');
-    }
-    if (oldVersion < 6) {
-      await db.execute('ALTER TABLE properties ADD COLUMN bedrooms INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE properties ADD COLUMN floor INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE properties ADD COLUMN total_floors INTEGER DEFAULT 0');
-      await db.execute('ALTER TABLE properties ADD COLUMN listing_type TEXT DEFAULT "sale"');
-    }
+    if (oldVersion < 5) { await db.execute('ALTER TABLE agents ADD COLUMN password TEXT'); await db.execute('ALTER TABLE agents ADD COLUMN profile_image TEXT'); await db.execute('ALTER TABLE properties ADD COLUMN is_public INTEGER DEFAULT 1'); }
+    if (oldVersion < 6) { await db.execute('ALTER TABLE properties ADD COLUMN bedrooms INTEGER DEFAULT 0'); await db.execute('ALTER TABLE properties ADD COLUMN floor INTEGER DEFAULT 0'); await db.execute('ALTER TABLE properties ADD COLUMN total_floors INTEGER DEFAULT 0'); await db.execute('ALTER TABLE properties ADD COLUMN listing_type TEXT DEFAULT "sale"'); }
     if (oldVersion < 7) { await db.execute('ALTER TABLE properties ADD COLUMN monthly_rent REAL DEFAULT 0'); }
-    if (oldVersion < 8) {
-      await db.execute('''
-        CREATE TABLE viewings (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL,
-          viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      ''');
-    }
-    if (oldVersion < 9) {
-      await db.execute('''
-        CREATE TABLE plans (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL,
-          duration_type TEXT DEFAULT 'months', price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL,
-          is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      ''');
-    }
-    if (oldVersion < 11) {
-      await db.execute('''
-        CREATE TABLE invitations (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, inviter_name TEXT NOT NULL, inviter_role TEXT NOT NULL,
-          target_role TEXT NOT NULL, apk_download_url TEXT, is_used INTEGER DEFAULT 0, used_by_device_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      ''');
-    }
-    if (oldVersion < 12) {
-      await db.execute('''
-        CREATE TABLE licenses (
-          id INTEGER PRIMARY KEY AUTOINCREMENT, estate_name TEXT NOT NULL, device_id TEXT NOT NULL, license_code TEXT NOT NULL,
-          plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL, expiry_date TEXT NOT NULL, issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      ''');
+    if (oldVersion < 8) { await db.execute('CREATE TABLE viewings (id INTEGER PRIMARY KEY AUTOINCREMENT, property_id INTEGER, customer_name TEXT NOT NULL, customer_phone TEXT NOT NULL, viewing_date TEXT NOT NULL, viewing_time TEXT NOT NULL, notes TEXT, status TEXT DEFAULT "pending", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'); }
+    if (oldVersion < 9) { await db.execute('CREATE TABLE plans (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, duration_value INTEGER NOT NULL, duration_type TEXT DEFAULT "months", price REAL NOT NULL, max_agents INTEGER NOT NULL, max_properties INTEGER NOT NULL, is_active INTEGER DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'); }
+    if (oldVersion < 11) { await db.execute('CREATE TABLE invitations (id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, inviter_name TEXT NOT NULL, inviter_role TEXT NOT NULL, target_role TEXT NOT NULL, apk_download_url TEXT, is_used INTEGER DEFAULT 0, used_by_device_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'); }
+    if (oldVersion < 12) { await db.execute('CREATE TABLE licenses (id INTEGER PRIMARY KEY AUTOINCREMENT, estate_name TEXT NOT NULL, device_id TEXT NOT NULL, license_code TEXT NOT NULL, plan_id INTEGER NOT NULL, plan_name TEXT NOT NULL, expiry_date TEXT NOT NULL, issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'); }
+    if (oldVersion < 13) {
+      await db.execute('CREATE TABLE expense_categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)');
+      await db.execute('INSERT INTO expense_categories (name) VALUES ("قبوض"), ("حقوق"), ("تبلیغات"), ("تعمیرات"), ("سایر")');
     }
   }
 
-  // --- متدهای املاک ---
-  Future<int> insertProperty(Map<String, dynamic> property) async {
-    final db = await instance.database;
-    return await db.insert('properties', property);
-  }
+  // --- متدهای عمومی ---
+  Future<List<Map<String, dynamic>>> getAllProperties() async { final db = await instance.database; return await db.query('properties', orderBy: 'id DESC'); }
+  Future<List<Map<String, dynamic>>> getAvailableProperties() async { final db = await instance.database; return await db.query('properties', where: 'status = ?', whereArgs: ['available'], orderBy: 'id DESC'); }
+  Future<Map<String, dynamic>?> getPropertyById(int id) async { final db = await instance.database; final result = await db.query('properties', where: 'id = ?', whereArgs: [id]); return result.isNotEmpty ? result.first : null; }
+  Future<int> insertProperty(Map<String, dynamic> property) async { final db = await instance.database; return await db.insert('properties', property); }
+  Future<int> updateProperty(int id, Map<String, dynamic> property) async { final db = await instance.database; return await db.update('properties', property, where: 'id = ?', whereArgs: [id]); }
+  Future<int> deleteProperty(int id) async { final db = await instance.database; return await db.delete('properties', where: 'id = ?', whereArgs: [id]); }
+  Future<int> updatePropertyStatus(int id, String status) async { final db = await instance.database; return await db.update('properties', {'status': status}, where: 'id = ?', whereArgs: [id]); }
 
-  Future<List<Map<String, dynamic>>> getAllProperties() async {
-    final db = await instance.database;
-    return await db.query('properties', orderBy: 'id DESC');
-  }
+  Future<List<Map<String, dynamic>>> getAllAgents() async { final db = await instance.database; return await db.query('agents', orderBy: 'id DESC'); }
+  Future<int> insertAgent(Map<String, dynamic> agent) async { final db = await instance.database; return await db.insert('agents', agent); }
+  Future<int> updateAgent(int id, Map<String, dynamic> agent) async { final db = await instance.database; return await db.update('agents', agent, where: 'id = ?', whereArgs: [id]); }
+  Future<int> deleteAgent(int id) async { final db = await instance.database; return await db.delete('agents', where: 'id = ?', whereArgs: [id]); }
+  Future<Map<String, dynamic>?> getAgentByCredentials(String name, String password) async { final db = await instance.database; final result = await db.query('agents', where: 'name = ? AND password = ? AND status = "active"', whereArgs: [name, password]); return result.isNotEmpty ? result.first : null; }
 
-  Future<List<Map<String, dynamic>>> getAvailableProperties() async {
-    final db = await instance.database;
-    return await db.query('properties', where: 'status = ?', whereArgs: ['available'], orderBy: 'id DESC');
-  }
+  Future<List<Map<String, dynamic>>> getAllViewings() async { final db = await instance.database; return await db.rawQuery('SELECT v.*, p.title as property_title FROM viewings v LEFT JOIN properties p ON v.property_id = p.id ORDER BY v.id DESC'); }
+  Future<List<Map<String, dynamic>>> getViewingsByAgent(String agentName) async { final db = await instance.database; return await db.rawQuery('SELECT v.*, p.title as property_title, p.agent_name FROM viewings v JOIN properties p ON v.property_id = p.id WHERE p.agent_name = ? ORDER BY v.id DESC', [agentName]); }
+  Future<int> insertViewing(Map<String, dynamic> viewing) async { final db = await instance.database; return await db.insert('viewings', viewing); }
+  Future<int> updateViewingStatus(int id, String status) async { final db = await instance.database; return await db.update('viewings', {'status': status}, where: 'id = ?', whereArgs: [id]); }
+  Future<int> deleteViewing(int id) async { final db = await instance.database; return await db.delete('viewings', where: 'id = ?', whereArgs: [id]); }
 
-  Future<Map<String, dynamic>?> getPropertyById(int id) async {
-    final db = await instance.database;
-    final result = await db.query('properties', where: 'id = ?', whereArgs: [id]);
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  Future<int> updateProperty(int id, Map<String, dynamic> property) async {
-    final db = await instance.database;
-    return await db.update('properties', property, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteProperty(int id) async {
-    final db = await instance.database;
-    return await db.delete('properties', where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> updatePropertyStatus(int id, String status) async {
-    final db = await instance.database;
-    return await db.update('properties', {'status': status}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  // --- متدهای مشاوران ---
-  Future<int> insertAgent(Map<String, dynamic> agent) async {
-    final db = await instance.database;
-    return await db.insert('agents', agent);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllAgents() async {
-    final db = await instance.database;
-    return await db.query('agents', orderBy: 'id DESC');
-  }
-
-  Future<Map<String, dynamic>?> getAgentByCredentials(String name, String password) async {
-    final db = await instance.database;
-    final result = await db.query('agents', where: 'name = ? AND password = ? AND status = "active"', whereArgs: [name, password]);
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  Future<int> updateAgent(int id, Map<String, dynamic> agent) async {
-    final db = await instance.database;
-    return await db.update('agents', agent, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteAgent(int id) async {
-    final db = await instance.database;
-    return await db.delete('agents', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // --- متدهای بازدیدها ---
-  Future<int> insertViewing(Map<String, dynamic> viewing) async {
-    final db = await instance.database;
-    return await db.insert('viewings', viewing);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllViewings() async {
-    final db = await instance.database;
-    return await db.rawQuery('''
-      SELECT v.*, p.title as property_title 
-      FROM viewings v LEFT JOIN properties p ON v.property_id = p.id 
-      ORDER BY v.id DESC
-    ''');
-  }
-
-  Future<List<Map<String, dynamic>>> getViewingsByAgent(String agentName) async {
-    final db = await instance.database;
-    return await db.rawQuery('''
-      SELECT v.*, p.title as property_title, p.agent_name 
-      FROM viewings v JOIN properties p ON v.property_id = p.id 
-      WHERE p.agent_name = ? ORDER BY v.id DESC
-    ''', [agentName]);
-  }
-
-  Future<int> updateViewingStatus(int id, String status) async {
-    final db = await instance.database;
-    return await db.update('viewings', {'status': status}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deleteViewing(int id) async {
-    final db = await instance.database;
-    return await db.delete('viewings', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // --- متدهای معاملات ---
-  Future<void> registerDeal({
-    required int propertyId, required String propertyTitle, required String agentName,
-    required String customerName, required String customerPhone, required String dealType, required double amount,
-  }) async {
+  Future<void> registerDeal({required int propertyId, required String propertyTitle, required String agentName, required String customerName, required String customerPhone, required String dealType, required double amount}) async {
     final db = await instance.database;
     await db.transaction((txn) async {
-      await txn.insert('contracts', {
-        'property_id': propertyId, 'property_title': propertyTitle, 'agent_name': agentName,
-        'customer_name': customerName, 'customer_phone': customerPhone, 'deal_type': dealType, 'amount': amount, 'status': 'active',
-      });
-      final newStatus = dealType == 'sale' ? 'sold' : 'rented';
-      await txn.update('properties', {'status': newStatus}, where: 'id = ?', whereArgs: [propertyId]);
+      await txn.insert('contracts', {'property_id': propertyId, 'property_title': propertyTitle, 'agent_name': agentName, 'customer_name': customerName, 'customer_phone': customerPhone, 'deal_type': dealType, 'amount': amount, 'status': 'active'});
+      await txn.update('properties', {'status': dealType == 'sale' ? 'sold' : 'rented'}, where: 'id = ?', whereArgs: [propertyId]);
     });
   }
+  Future<List<Map<String, dynamic>>> getAllContracts() async { final db = await instance.database; return await db.query('contracts', orderBy: 'id DESC'); }
 
-  Future<List<Map<String, dynamic>>> getAllContracts() async {
-    final db = await instance.database;
-    return await db.query('contracts', orderBy: 'id DESC');
-  }
+  Future<List<Map<String, dynamic>>> getAllPlans() async { final db = await instance.database; return await db.query('plans', orderBy: 'duration_value ASC'); }
+  Future<int> insertPlan(Map<String, dynamic> plan) async { final db = await instance.database; return await db.insert('plans', plan); }
+  Future<int> updatePlan(int id, Map<String, dynamic> plan) async { final db = await instance.database; return await db.update('plans', plan, where: 'id = ?', whereArgs: [id]); }
+  Future<int> deletePlan(int id) async { final db = await instance.database; return await db.delete('plans', where: 'id = ?', whereArgs: [id]); }
 
-  // --- متدهای پلن‌ها ---
-  Future<int> insertPlan(Map<String, dynamic> plan) async {
-    final db = await instance.database;
-    return await db.insert('plans', plan);
-  }
+  Future<int> insertInvitation(Map<String, dynamic> invitation) async { final db = await instance.database; return await db.insert('invitations', invitation); }
+  Future<List<Map<String, dynamic>>> getAllInvitations() async { final db = await instance.database; return await db.query('invitations', orderBy: 'id DESC'); }
+  Future<Map<String, dynamic>?> getInvitationByCode(String code) async { final db = await instance.database; final result = await db.query('invitations', where: 'code = ?', whereArgs: [code]); return result.isNotEmpty ? result.first : null; }
+  Future<int> markInvitationAsUsed(int id, String deviceId) async { final db = await instance.database; return await db.update('invitations', {'is_used': 1, 'used_by_device_id': deviceId}, where: 'id = ?', whereArgs: [id]); }
 
-  Future<List<Map<String, dynamic>>> getAllPlans() async {
-    final db = await instance.database;
-    return await db.query('plans', orderBy: 'duration_value ASC');
-  }
+  Future<int> insertLicense(Map<String, dynamic> license) async { final db = await instance.database; return await db.insert('licenses', license); }
+  Future<List<Map<String, dynamic>>> getAllLicenses() async { final db = await instance.database; return await db.query('licenses', orderBy: 'id DESC'); }
+  Future<List<Map<String, dynamic>>> searchLicenses(String query) async { final db = await instance.database; return await db.query('licenses', where: 'estate_name LIKE ? OR device_id LIKE ?', whereArgs: ['%$query%', '%$query%'], orderBy: 'id DESC'); }
+  Future<int> deleteLicense(int id) async { final db = await instance.database; return await db.delete('licenses', where: 'id = ?', whereArgs: [id]); }
 
-  Future<int> updatePlan(int id, Map<String, dynamic> plan) async {
-    final db = await instance.database;
-    return await db.update('plans', plan, where: 'id = ?', whereArgs: [id]);
-  }
-
-  Future<int> deletePlan(int id) async {
-    final db = await instance.database;
-    return await db.delete('plans', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // --- متدهای دعوت‌نامه‌ها ---
-  Future<int> insertInvitation(Map<String, dynamic> invitation) async {
-    final db = await instance.database;
-    return await db.insert('invitations', invitation);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllInvitations() async {
-    final db = await instance.database;
-    return await db.query('invitations', orderBy: 'id DESC');
-  }
-
-  Future<Map<String, dynamic>?> getInvitationByCode(String code) async {
-    final db = await instance.database;
-    final result = await db.query('invitations', where: 'code = ?', whereArgs: [code]);
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  Future<int> markInvitationAsUsed(int id, String deviceId) async {
-    final db = await instance.database;
-    return await db.update('invitations', {'is_used': 1, 'used_by_device_id': deviceId}, where: 'id = ?', whereArgs: [id]);
-  }
-
-  // --- متدهای سوابق لایسنس ---
-  Future<int> insertLicense(Map<String, dynamic> license) async {
-    final db = await instance.database;
-    return await db.insert('licenses', license);
-  }
-
-  Future<List<Map<String, dynamic>>> getAllLicenses() async {
-    final db = await instance.database;
-    return await db.query('licenses', orderBy: 'id DESC');
-  }
-
-  Future<List<Map<String, dynamic>>> searchLicenses(String query) async {
-    final db = await instance.database;
-    return await db.query(
-      'licenses',
-      where: 'estate_name LIKE ? OR device_id LIKE ?',
-      whereArgs: ['%$query%', '%$query%'],
-      orderBy: 'id DESC',
-    );
-  }
-
-  Future<int> deleteLicense(int id) async {
-    final db = await instance.database;
-    return await db.delete('licenses', where: 'id = ?', whereArgs: [id]);
-  }
-
-  // --- پاک کردن دیتابیس ---
   Future<void> resetDatabase() async {
     final db = await instance.database;
-    await db.delete('properties');
-    await db.delete('customers');
-    await db.delete('contracts');
-    await db.delete('payments');
-    await db.delete('expenses');
-    await db.delete('agents');
-    await db.delete('viewings');
-    await db.delete('plans');
-    await db.delete('invitations');
-    await db.delete('licenses');
+    await db.delete('properties'); await db.delete('customers'); await db.delete('contracts'); await db.delete('payments');
+    await db.delete('expenses'); await db.delete('agents'); await db.delete('viewings'); await db.delete('plans');
+    await db.delete('invitations'); await db.delete('licenses'); await db.delete('expense_categories');
+    await db.execute('INSERT INTO expense_categories (name) VALUES ("قبوض"), ("حقوق"), ("تبلیغات"), ("تعمیرات"), ("سایر")');
+  }
+
+  // --- متدهای جدید هزینه‌ها ---
+  Future<List<Map<String, dynamic>>> getExpenseCategories() async {
+    final db = await instance.database;
+    return await db.query('expense_categories', orderBy: 'name ASC');
+  }
+
+  Future<int> addExpenseCategory(String name) async {
+    final db = await instance.database;
+    return await db.insert('expense_categories', {'name': name});
+  }
+
+  Future<int> deleteExpenseCategory(int id) async {
+    final db = await instance.database;
+    return await db.delete('expense_categories', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getExpenses({String? category, String? startDate, String? endDate, String? searchQuery}) async {
+    final db = await instance.database;
+    String where = '1=1';
+    List<dynamic> whereArgs = [];
+
+    if (category != null && category.isNotEmpty && category != 'همه') {
+      where += ' AND category = ?';
+      whereArgs.add(category);
+    }
+    if (startDate != null && startDate.isNotEmpty) {
+      where += ' AND date >= ?';
+      whereArgs.add(startDate);
+    }
+    if (endDate != null && endDate.isNotEmpty) {
+      where += ' AND date <= ?';
+      whereArgs.add(endDate);
+    }
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      where += ' AND (description LIKE ? OR category LIKE ?)';
+      whereArgs.add('%$searchQuery%');
+      whereArgs.add('%$searchQuery%');
+    }
+
+    return await db.query('expenses', where: where, whereArgs: whereArgs, orderBy: 'id DESC');
+  }
+
+  Future<int> insertExpense(Map<String, dynamic> expense) async {
+    final db = await instance.database;
+    return await db.insert('expenses', expense);
+  }
+
+  Future<int> deleteExpense(int id) async {
+    final db = await instance.database;
+    return await db.delete('expenses', where: 'id = ?', whereArgs: [id]);
   }
 }
