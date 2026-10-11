@@ -223,6 +223,61 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
                     _calculateExpiryDate();
                   },
                 ),
+                
+                // کارت نمایش جزئیات پلن انتخابی (جدید)
+                if (_selectedPlan != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.cardBlack,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.gold, width: 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.info_outline, color: AppTheme.gold, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'جزئیات پلن انتخابی: ${_selectedPlan!['name']}',
+                                style: const TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        _buildPlanDetailRow(
+                          Icons.calendar_today,
+                          'مدت',
+                          '${_selectedPlan!['duration_value']} ${_selectedPlan!['duration_type'] == 'days' ? 'روز' : 'ماه'}',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPlanDetailRow(
+                          Icons.attach_money,
+                          'قیمت',
+                          (_selectedPlan!['price'] ?? 0) == 0 ? 'رایگان' : '${formatPrice(_selectedPlan!['price'])} تومان',
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPlanDetailRow(
+                          Icons.people,
+                          'سقف مشاوران',
+                          (_selectedPlan!['max_agents'] ?? 0) == 0 ? 'نامحدود (∞)' : toPersianDigits((_selectedPlan!['max_agents'] ?? 0).toString()),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildPlanDetailRow(
+                          Icons.home,
+                          'سقف فایل ملک',
+                          (_selectedPlan!['max_properties'] ?? 0) == 0 ? 'نامحدود (∞)' : toPersianDigits((_selectedPlan!['max_properties'] ?? 0).toString()),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () async {
@@ -350,6 +405,22 @@ class _DeveloperPanelScreenState extends State<DeveloperPanelScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPlanDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: AppTheme.textGrey, size: 18),
+        const SizedBox(width: 8),
+        Text('$label: ', style: const TextStyle(color: AppTheme.textGrey)),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }
