@@ -69,7 +69,10 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     value: selectedCategory,
                     dropdownColor: AppTheme.cardBlack,
                     decoration: const InputDecoration(labelText: 'دسته‌بندی', prefixIcon: Icon(Icons.category, color: AppTheme.gold)),
-                    items: _categories.map((cat) => DropdownMenuItem(value: cat['name'], child: Text(cat['name']))).toList(),
+                    items: _categories.map<DropdownMenuItem<String>>((cat) => DropdownMenuItem<String>(
+                      value: cat['name'].toString(), 
+                      child: Text(cat['name'].toString())
+                    )).toList(),
                     onChanged: (v) => setStateDialog(() => selectedCategory = v!),
                   ),
                   const SizedBox(height: 16),
@@ -88,7 +91,17 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                         initialDate: selectedDate,
                         firstDate: Jalali(1390),
                         lastDate: Jalali(1450),
-                        builder: (context, child) => Theme(data: Theme.of(context).copyWith(colorScheme: const ColorScheme.dark(primary: AppTheme.gold, onPrimary: Colors.black, surface: AppTheme.cardBlack, onSurface: AppTheme.textWhite)), child: child!),
+                        builder: (context, child) => Theme(
+                          data: Theme.of(context).copyWith(
+                            colorScheme: const ColorScheme.dark(
+                              primary: AppTheme.gold, 
+                              onPrimary: Colors.black, 
+                              surface: AppTheme.cardBlack, 
+                              onSurface: AppTheme.textWhite
+                            )
+                          ), 
+                          child: child!,
+                        ),
                       );
                       if (picked != null) setStateDialog(() => selectedDate = picked);
                     },
@@ -147,15 +160,24 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             children: [
               Row(
                 children: [
-                  Expanded(child: TextFormField(controller: newCategoryController, style: const TextStyle(color: AppTheme.textWhite), decoration: const InputDecoration(labelText: 'نام دسته‌بندی جدید', hintText: 'مثلاً: پذیرایی'))),
+                  Expanded(
+                    child: TextFormField(
+                      controller: newCategoryController, 
+                      style: const TextStyle(color: AppTheme.textWhite), 
+                      decoration: const InputDecoration(labelText: 'نام دسته‌بندی جدید', hintText: 'مثلاً: پذیرایی')
+                    )
+                  ),
                   const SizedBox(width: 8),
-                  IconButton(icon: const Icon(Icons.add, color: AppTheme.gold), onPressed: () async {
-                    if (newCategoryController.text.trim().isNotEmpty) {
-                      await DatabaseHelper.instance.addExpenseCategory(newCategoryController.text.trim());
-                      newCategoryController.clear();
-                      _loadData(); // رفرش لیست
+                  IconButton(
+                    icon: const Icon(Icons.add, color: AppTheme.gold), 
+                    onPressed: () async {
+                      if (newCategoryController.text.trim().isNotEmpty) {
+                        await DatabaseHelper.instance.addExpenseCategory(newCategoryController.text.trim());
+                        newCategoryController.clear();
+                        _loadData();
+                      }
                     }
-                  })
+                  )
                 ],
               ),
               const SizedBox(height: 16),
@@ -167,10 +189,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     final cat = _categories[index];
                     return ListTile(
                       title: Text(cat['name'], style: const TextStyle(color: AppTheme.textWhite)),
-                      trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () async {
-                        await DatabaseHelper.instance.deleteExpenseCategory(cat['id']);
-                        _loadData();
-                      }),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red), 
+                        onPressed: () async {
+                          await DatabaseHelper.instance.deleteExpenseCategory(cat['id']);
+                          _loadData();
+                        }
+                      ),
                     );
                   },
                 ),
@@ -219,7 +244,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       ),
       body: Column(
         children: [
-          // بخش فیلتر و جستجو
           Container(
             padding: const EdgeInsets.all(12),
             color: AppTheme.cardBlack,
@@ -232,7 +256,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                     hintText: 'جستجو در توضیحات یا دسته‌بندی...',
                     hintStyle: const TextStyle(color: AppTheme.textGrey),
                     prefixIcon: const Icon(Icons.search, color: AppTheme.gold),
-                    suffixIcon: _searchQuery.isNotEmpty ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.gold), onPressed: () { setState(() => _searchQuery = ''); _loadData(); }) : null,
+                    suffixIcon: _searchQuery.isNotEmpty 
+                        ? IconButton(icon: const Icon(Icons.clear, color: AppTheme.gold), onPressed: () { setState(() => _searchQuery = ''); _loadData(); }) 
+                        : null,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -243,8 +269,11 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       child: DropdownButtonFormField<String>(
                         value: _selectedCategory,
                         dropdownColor: AppTheme.cardBlack,
-                        decoration: const InputDecoration(labelText: 'دسته‌بندی', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                        items: [const DropdownMenuItem(value: 'همه', child: Text('همه')), ..._categories.map((c) => DropdownMenuItem(value: c['name'], child: Text(c['name'])))],
+                        decoration: InputDecoration(labelText: 'دسته‌بندی', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                        items: [
+                          const DropdownMenuItem(value: 'همه', child: Text('همه')), 
+                          ..._categories.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(value: c['name'].toString(), child: Text(c['name'].toString())))
+                        ],
                         onChanged: (v) { setState(() => _selectedCategory = v!); _loadData(); },
                       ),
                     ),
