@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'database_helper.dart';
 import 'app_utils.dart';
-import 'license_manager.dart';
+import 'license_helper.dart';
 
 class AddAgentScreen extends StatefulWidget {
   final int? agentId;
@@ -72,8 +72,15 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
     
     // بررسی محدودیت فقط هنگام افزودن (نه ویرایش)
     if (!_isEditMode) {
-      final check = await LicenseManager.canAddAgent();
-      if (!check['allowed']) {
+      // 1. دریافت لایسنس فعلی
+      final license = await LicenseHelper.getLicense();
+      
+      // دیباگ: چاپ مقادیر
+      print('=== DEBUG: License Check ===');
+      print('License: $license');
+      
+      if (license == null || license['isActive'] != true) {
+        print('ERROR: No active license');
         if (mounted) {
           showDialog(
             context: context,
@@ -85,17 +92,12 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
                   children: [
                     Icon(Icons.lock, color: Colors.red, size: 28),
                     SizedBox(width: 8),
-                    Text('محدودیت پلن', style: TextStyle(color: Colors.red)),
+                    Text('لایسنس فعال ندارید', style: TextStyle(color: Colors.red)),
                   ],
                 ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(check['message'] ?? 'امکان ثبت مشاور جدید وجود ندارد', style: const TextStyle(color: AppTheme.textWhite)),
-                    const SizedBox(height: 12),
-                    const Text('برای افزایش سقف مشاوران، پلن خود را ارتقا دهید.', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
-                  ],
+                content: const Text(
+                  'برای ثبت مشاور جدید، ابتدا باید لایسنس فعال داشته باشید.',
+                  style: TextStyle(color: AppTheme.textWhite),
                 ),
                 actions: [
                   TextButton(
@@ -108,6 +110,100 @@ class _AddAgentScreenState extends State<AddAgentScreen> {
           );
         }
         return;
+      }
+      
+      // 2. دریافت پلن فعلی
+      final plans = await DatabaseHelper.instance.getAllPlans();
+      print('Plans: $plans');
+      
+      final plan = plans.firstWhere((p) => p['id'] == license['planId'], orElse: () => {});
+      print('Selected Plan: $plan');
+      
+      if (plan.isEmpty) {
+        print('ERROR: Plan not found');
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (ctx) => Directionality(
+              textDirection: TextDirection.rtl,
+              child: AlertDialog(
+                backgroundColor: AppTheme.cardBlack,
+                title: const Text('خطا', style: TextStyle(color: Colors.red)),
+                content: const Text('پلن مربوطه یافت نشد', style: TextStyle(color: AppTheme.textWhite)),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      
+      // 3. بررسی سقف مشاوران
+      final maxAgents = plan['max_agents'] ?? 0;
+      print('Max Agents: $maxAgents');
+      
+      if (maxAgents > 0) { // اگر 0 باشد یعنی نامحدود
+        final allAgents = await DatabaseHelper.instance.getAllAgents();
+        final activeAgents = allAgents.where((a) => a['status'] == 'active').length;
+        
+        print('Current Active Agents: $activeAgents');
+        print('Allowed: ${activeAgents < maxAgents}');
+        
+        if (activeAgents >= maxAgents) {
+          print('BLOCKED: Limit reached');
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (ctx) => Directionality(
+                textDirection: TextDirection.rtl,
+                child: AlertDialog(
+                  backgroundColor: AppTheme.cardBlack,
+                  title: const Row(
+                    children: [
+                      Icon(Icons.lock, color: Colors.red, size: 28),
+                      SizedBox(width: 8),
+                      Text('محدودیت پلن', style: TextStyle(color: Colors.red)),
+                    ],
+                  ),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'سقف مشاوران پلن شما پر شده است',
+                        style: const TextStyle(color: AppTheme.textWhite, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'تعداد فعلی: ${toPersianDigits(activeAgents.toString())} از ${toPersianDigits(maxAgents.toString())}',
+                        style: const TextStyle(color: AppTheme.textYellow),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'برای افزایش سقف مشاوران، پلن خود را ارتقا دهید.',
+                        style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('متوجه شدم', style: TextStyle(color: AppTheme.gold)),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return;
+        }
+      } else {
+        print('Unlimited agents allowed');
       }
     }
     
