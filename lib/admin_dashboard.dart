@@ -245,6 +245,24 @@ class _AdminDashboardState extends State<AdminDashboard> {
                               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.gold, foregroundColor: Colors.black, padding: const EdgeInsets.symmetric(vertical: 8)),
                             ),
                           ),
+                        ] else ...[
+                          // دکمه ارتقا پلن (جدید)
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => const LicenseInputScreen()));
+                                if (result == true) _loadData();
+                              },
+                              icon: const Icon(Icons.upgrade, size: 18, color: AppTheme.gold),
+                              label: const Text('ارتقا پلن', style: TextStyle(fontSize: 14, color: AppTheme.gold)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: AppTheme.gold, width: 1),
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -285,7 +303,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   ),
 
-                  // کارت وضعیت مصرف پلن (جدید)
+                  // کارت وضعیت مصرف پلن
                   if (_usageStats != null && _usageStats!['hasLicense'] == true)
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
