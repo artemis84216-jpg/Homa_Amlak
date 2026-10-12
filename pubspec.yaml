@@ -20,7 +20,8 @@ dependencies:
   url_launcher: ^6.2.5
   device_info_plus: ^10.1.0
   shared_preferences: ^2.2.2
-  qr_flutter: ^4.1.0  # <-- این خط اضافه شد
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.1.1  # <-- این خط اضافه شد
 
 flutter:
   uses-material-design: true
