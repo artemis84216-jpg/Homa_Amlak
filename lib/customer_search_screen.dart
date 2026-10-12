@@ -49,6 +49,21 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
     });
   }
 
+  void _showFullScreenImage(String imagePath) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            child: Image.file(File(imagePath), fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -134,30 +149,84 @@ class _CustomerSearchScreenState extends State<CustomerSearchScreen> {
                                   textDirection: TextDirection.rtl,
                                   child: Padding(
                                     padding: const EdgeInsets.all(12),
-                                    child: Row(
+                                    child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // تصویر مربعی
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: images.isNotEmpty
-                                              ? Image.file(File(images[0]), width: 100, height: 100, fit: BoxFit.cover)
-                                              : Container(width: 100, height: 100, color: AppTheme.cardBlack, child: const Icon(Icons.home, color: AppTheme.textGrey, size: 40)),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(p['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textWhite)),
-                                              const SizedBox(height: 4),
-                                              Text('${p['type']} | ${formatNumber((p['area'] ?? 0).toInt())} متر', style: const TextStyle(color: AppTheme.textGrey)),
-                                              const SizedBox(height: 8),
-                                              Text('${formatPrice(p['price'])} تومان', style: const TextStyle(color: AppTheme.textYellow, fontWeight: FontWeight.bold, fontSize: 16)),
-                                            ],
+                                        // نمایش همه عکس‌ها به صورت مربعی در کنار هم
+                                        if (images.isNotEmpty) ...[
+                                          SizedBox(
+                                            height: 100,
+                                            child: ListView.builder(
+                                              scrollDirection: Axis.horizontal,
+                                              itemCount: images.length,
+                                              itemBuilder: (ctx, i) {
+                                                return Padding(
+                                                  padding: const EdgeInsets.only(left: 8),
+                                                  child: GestureDetector(
+                                                    onTap: () => _showFullScreenImage(images[i]),
+                                                    child: ClipRRect(
+                                                      borderRadius: BorderRadius.circular(8),
+                                                      child: Image.file(
+                                                        File(images[i]),
+                                                        width: 100,
+                                                        height: 100,
+                                                        fit: BoxFit.cover,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
                                           ),
+                                          const SizedBox(height: 12),
+                                        ] else ...[
+                                          Container(
+                                            width: 100,
+                                            height: 100,
+                                            decoration: BoxDecoration(
+                                              color: AppTheme.cardBlack,
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: AppTheme.gold.withOpacity(0.3)),
+                                            ),
+                                            child: const Icon(Icons.home, color: AppTheme.textGrey, size: 40),
+                                          ),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(color: AppTheme.gold.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: AppTheme.gold)),
+                                              child: Text(p['type'] ?? '', style: const TextStyle(color: AppTheme.gold, fontWeight: FontWeight.bold, fontSize: 12)),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(color: p['listing_type'] == 'rent' ? Colors.blue.withOpacity(0.2) : Colors.green.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: p['listing_type'] == 'rent' ? Colors.blue : Colors.green)),
+                                              child: Text(p['listing_type'] == 'rent' ? 'اجاره' : 'فروش', style: TextStyle(color: p['listing_type'] == 'rent' ? Colors.blue : Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
+                                            ),
+                                            const Spacer(),
+                                            if (images.length > 1)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.5), borderRadius: BorderRadius.circular(8)),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.photo_library, color: AppTheme.gold, size: 14),
+                                                    const SizedBox(width: 4),
+                                                    Text('${toPersianDigits(images.length.toString())} عکس', style: const TextStyle(color: AppTheme.gold, fontSize: 12)),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
                                         ),
-                                        const Icon(Icons.chevron_left, color: AppTheme.gold),
+                                        const SizedBox(height: 8),
+                                        Text(p['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textWhite)),
+                                        const SizedBox(height: 4),
+                                        Text('${formatNumber((p['area'] ?? 0).toInt())} متر | ${formatNumber((p['bedrooms'] ?? 0).toInt())} خواب', style: const TextStyle(color: AppTheme.textGrey)),
+                                        const SizedBox(height: 8),
+                                        Text('${formatPrice(p['price'])} تومان', style: const TextStyle(color: AppTheme.textYellow, fontWeight: FontWeight.bold, fontSize: 16)),
                                       ],
                                     ),
                                   ),
