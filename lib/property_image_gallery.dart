@@ -5,13 +5,11 @@ import 'app_utils.dart';
 
 class PropertyImageGallery extends StatefulWidget {
   final String? imagesJson;
-  final double height;
   final bool showCounter;
   
   const PropertyImageGallery({
     super.key,
     this.imagesJson,
-    this.height = 250,
     this.showCounter = true,
   });
 
@@ -20,20 +18,12 @@ class PropertyImageGallery extends StatefulWidget {
 }
 
 class _PropertyImageGalleryState extends State<PropertyImageGallery> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
   List<String> _images = [];
 
   @override
   void initState() {
     super.initState();
     _parseImages();
-    _pageController.addListener(() {
-      final page = _pageController.page?.round() ?? 0;
-      if (page != _currentPage) {
-        setState(() => _currentPage = page);
-      }
-    });
   }
 
   void _parseImages() {
@@ -81,7 +71,7 @@ class _PropertyImageGalleryState extends State<PropertyImageGallery> {
                     border: Border.all(color: AppTheme.gold, width: 1),
                   ),
                   child: Text(
-                    '${toPersianDigits((_currentPage + 1).toString())} / ${toPersianDigits(_images.length.toString())}',
+                    '${toPersianDigits((index + 1).toString())} / ${toPersianDigits(_images.length.toString())}',
                     style: const TextStyle(color: AppTheme.gold, fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -94,16 +84,10 @@ class _PropertyImageGalleryState extends State<PropertyImageGallery> {
   }
 
   @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     if (_images.isEmpty) {
       return Container(
-        height: widget.height,
+        height: 150,
         color: AppTheme.cardBlack,
         child: Center(
           child: Column(
@@ -118,80 +102,59 @@ class _PropertyImageGalleryState extends State<PropertyImageGallery> {
       );
     }
 
-    return SizedBox(
-      height: widget.height,
-      child: Stack(
-        children: [
-          PageView.builder(
-            controller: _pageController,
+    // نمایش عکس‌ها به صورت مربعی در کنار هم
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 120,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
             itemCount: _images.length,
             itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () => _openFullScreen(index),
-                child: Image.file(
-                  File(_images[index]),
-                  fit: BoxFit.cover,
-                  width: double.infinity,
+              return Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: GestureDetector(
+                  onTap: () => _openFullScreen(index),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(_images[index]),
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
               );
             },
           ),
-          // نشانگر تعداد عکس
-          if (widget.showCounter && _images.length > 1)
-            Positioned(
-              bottom: 12,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.gold, width: 1),
+        ),
+        if (widget.showCounter && _images.length > 1) ...[
+          const SizedBox(height: 8),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.cardBlack,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.gold, width: 0.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.photo_library, color: AppTheme.gold, size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${toPersianDigits(_images.length.toString())} تصویر - برای بزرگنمایی کلیک کنید',
+                    style: const TextStyle(color: AppTheme.gold, fontSize: 12),
                   ),
-                  child: Text(
-                    '${toPersianDigits((_currentPage + 1).toString())} / ${toPersianDigits(_images.length.toString())}',
-                    style: const TextStyle(
-                      color: AppTheme.gold,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                ],
               ),
             ),
-          // دکمه‌های جهت‌نما
-          if (_images.length > 1) ...[
-            Positioned(
-              right: 8,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IconButton(
-                  icon: const Icon(Icons.chevron_right, color: AppTheme.gold, size: 32),
-                  onPressed: _currentPage > 0
-                      ? () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.ease)
-                      : null,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 8,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: IconButton(
-                  icon: const Icon(Icons.chevron_left, color: AppTheme.gold, size: 32),
-                  onPressed: _currentPage < _images.length - 1
-                      ? () => _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.ease)
-                      : null,
-                ),
-              ),
-            ),
-          ],
+          ),
         ],
-      ),
+      ],
     );
   }
 }
