@@ -40,6 +40,21 @@ class _AdminPropertiesScreenState extends State<AdminPropertiesScreen> {
     _loadProperties();
   }
 
+  void _showFullScreenImage(String imagePath) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: InteractiveViewer(
+            child: Image.file(File(imagePath), fit: BoxFit.contain),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,7 +84,7 @@ class _AdminPropertiesScreenState extends State<AdminPropertiesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start, 
                   children: [
-                    // نمایش عکس‌ها به صورت مربع در کنار هم
+                    // نمایش عکس‌ها به صورت مربعی با قابلیت بزرگ‌نمایی
                     if (images.isNotEmpty) ...[
                       SizedBox(
                         height: 100,
@@ -79,13 +94,16 @@ class _AdminPropertiesScreenState extends State<AdminPropertiesScreen> {
                           itemBuilder: (ctx, i) {
                             return Padding(
                               padding: const EdgeInsets.only(left: 8),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(images[i]),
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
+                              child: GestureDetector(
+                                onTap: () => _showFullScreenImage(images[i]),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    File(images[i]),
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
                               ),
                             );
