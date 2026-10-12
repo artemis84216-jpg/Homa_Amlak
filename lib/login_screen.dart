@@ -3,6 +3,7 @@ import 'admin_dashboard.dart';
 import 'agent_dashboard.dart';
 import 'customer_dashboard.dart';
 import 'database_helper.dart';
+import 'qr_scanner_screen.dart';
 import 'app_utils.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -137,6 +138,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     _selectedRole == 'admin' ? 'مدیر: admin / 1234' : (_selectedRole == 'customer' ? 'مشتری: هر نامی / 1234' : 'مشاور: نام ثبت‌شده / رمز تعیین‌شده'),
                     style: const TextStyle(color: AppTheme.textGrey, fontSize: 12),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  const Divider(color: AppTheme.gold),
+                  const SizedBox(height: 16),
+                  
+                  // دکمه جدید اسکن کد دعوت
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const QrScannerScreen()));
+                    },
+                    icon: const Icon(Icons.qr_code_scanner, color: AppTheme.gold),
+                    label: const Text('اسکن کد دعوت (ویژه مشاوران و مشتریان جدید)', style: TextStyle(color: AppTheme.gold)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppTheme.gold),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
                   ),
                 ],
               ),
