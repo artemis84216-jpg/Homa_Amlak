@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'customer_search_screen.dart';
-import 'customer_viewings_screen.dart'; // <-- اضافه شد
+import 'customer_viewings_screen.dart';
+import 'favorites_screen.dart';
+import 'my_contracts_screen.dart';
 import 'app_utils.dart';
 
 class CustomerDashboard extends StatelessWidget {
@@ -35,10 +37,10 @@ class CustomerDashboard extends StatelessWidget {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerViewingsScreen()));
             }),
             _buildCard(context, Icons.favorite, 'علاقه‌مندی‌ها', AppTheme.gold, () {
-              _showComingSoon(context, 'علاقه‌مندی‌ها');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()));
             }),
             _buildCard(context, Icons.description, 'قراردادهای من', AppTheme.gold, () {
-              _showComingSoon(context, 'قراردادهای من');
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const MyContractsScreen()));
             }),
           ],
         ),
@@ -60,12 +62,6 @@ class CustomerDashboard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('بخش $feature به زودی اضافه می‌شود'), backgroundColor: AppTheme.gold),
     );
   }
 }
